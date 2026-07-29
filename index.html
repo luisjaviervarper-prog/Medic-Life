@@ -25,7 +25,8 @@
     --guard-primera:#E23B3B;
     --guard-segunda:#FF8C1F;
     --guard-tercera:#2FAE60;
-    --guard-pulmon:#F2C94C;
+    --guard-congenitas:#2F80ED;
+    --guard-pulmon:#B26BF5;
     --vac-vacation:#2E6FE0;
     --vac-festivo:#B3121C;
     --vac-permiso:#D6478F;
@@ -137,14 +138,23 @@
   .cal-primera{background:var(--guard-primera); color:#fff; font-weight:700;}
   .cal-segunda{background:var(--guard-segunda); color:#1a1200; font-weight:700;}
   .cal-tercera{background:var(--guard-tercera); color:#fff; font-weight:700;}
+  .cal-congenitas{background:var(--guard-congenitas); color:#fff; font-weight:700;}
   .cal-pulmon-mark{
-    position:absolute; top:0px; right:2px; font-size:7.5px; font-weight:800;
+    position:absolute; top:0px; right:2px; font-size:9px; font-weight:800;
     color:var(--guard-pulmon); line-height:1; text-shadow:0 0 2px rgba(0,0,0,0.8);
   }
   .cal-day-num{display:inline-flex; align-items:center; justify-content:center;}
   .cal-pulmon-ring{
     width:1.7em; height:1.7em; border-radius:50%;
     border:1.5px solid var(--guard-pulmon); box-sizing:border-box;
+  }
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-box{
+    background:var(--bg-ash); border:1px solid rgba(31,182,166,0.4); border-radius:10px;
+    padding:16px; width:100%; max-width:360px;
   }
   .cal-legend{display:flex; gap:16px; font-size:12px; color:var(--text-muted); margin-bottom:10px; flex-wrap:wrap; row-gap:6px;}
   .cal-legend span{display:inline-flex; align-items:center; gap:6px;}
@@ -172,6 +182,22 @@
 </style>
 </head>
 <body>
+
+  <!-- ===================== SELECTOR DE FECHA (calendario reutilizable) ===================== -->
+  <div id="datePickerModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:10px;">
+        <button class="icon-btn" id="datePickerPrevMonth">◀</button>
+        <span class="card-title" id="datePickerLabel">Mes</span>
+        <button class="icon-btn" id="datePickerNextMonth">▶</button>
+      </div>
+      <div class="cal-weekdays">
+        <span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div class="cal-grid" id="datePickerCalendar"></div>
+      <button class="btn-outline" id="datePickerCancel" style="margin-top:12px; margin-bottom:0;">Cancelar</button>
+    </div>
+  </div>
 
   <!-- ===================== BLOQUEO (PIN / huella / rostro) ===================== -->
   <section id="screen-lock" class="screen active">
@@ -232,6 +258,7 @@
       <div style="width:100%; max-width:340px;">
         <button class="btn-ember" id="btnVacations">🏖 Vacaciones</button>
         <button class="btn-ember" id="btnGuards">🩺 Guardias</button>
+        <button class="btn-ember" id="btnLibranzas">🗓️ Libranzas</button>
         <button class="btn-outline" id="btnLockNow">🔒 Bloquear ahora</button>
         <button class="btn-outline" id="btnResetPin">🔑 Cambiar PIN / huella</button>
       </div>
@@ -316,6 +343,7 @@
         <span><i style="background:var(--guard-primera);"></i>Primera</span>
         <span><i style="background:var(--guard-segunda);"></i>Segunda</span>
         <span><i style="background:var(--guard-tercera);"></i>Tercera</span>
+        <span><i style="background:var(--guard-congenitas);"></i>Congénitas</span>
         <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
       </div>
 
@@ -340,6 +368,8 @@
 
       <div class="section-title">Resumen por años</div>
       <div class="ficha-card" id="guardYearsTable"></div>
+
+      <button class="btn-outline" id="btnOpenGuardLog">📋 Registro de trasplantes y horas</button>
 
       <div class="section-title">Copia de seguridad de guardias</div>
       <p class="help-text" style="margin-bottom:10px;">
@@ -366,6 +396,7 @@
         <span><i style="background:var(--guard-primera);"></i>Primera</span>
         <span><i style="background:var(--guard-segunda);"></i>Segunda</span>
         <span><i style="background:var(--guard-tercera);"></i>Tercera</span>
+        <span><i style="background:var(--guard-congenitas);"></i>Congénitas</span>
         <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
       </div>
 
@@ -375,8 +406,78 @@
         <button class="btn-outline" id="btnTogglePrimeraEdit" style="margin-bottom:0;">✏️ Modificar primera</button>
         <button class="btn-outline" id="btnToggleSegundaEdit" style="margin-bottom:0;">✏️ Modificar segunda</button>
         <button class="btn-outline" id="btnToggleTerceraEdit" style="margin-bottom:0;">✏️ Modificar tercera</button>
+        <button class="btn-outline" id="btnToggleCongenitasEdit" style="margin-bottom:0;">✏️ Modificar congénitas</button>
         <button class="btn-outline" id="btnTogglePulmonEdit" style="margin-bottom:0;">✏️ Modificar pulmón</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ===================== GUARDIAS: REGISTRO (día por línea) ===================== -->
+  <section id="screen-guard-log" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" onclick="history.back()">←</button>
+      <h1>Registro de trasplantes y horas</h1>
+    </div>
+    <div class="content">
+      <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:14px;">
+        <button class="icon-btn" id="btnGuardLogPrevYear">◀</button>
+        <span class="app-title" id="guardLogYearLabel" style="font-size:22px;">2026</span>
+        <button class="icon-btn" id="btnGuardLogNextYear">▶</button>
+      </div>
+
+      <div class="tile">
+        <label class="field-label">Fecha</label>
+        <button class="btn-outline" id="btnPickLogDate" style="margin-bottom:6px;">📅 Elegir fecha</button>
+        <div class="card-muted" id="logSelectedDateLabel" style="margin-bottom:10px;">Sin fecha seleccionada</div>
+        <label class="field-label">Concepto</label>
+        <select id="logConceptSelect"></select>
+        <div id="logHoursRow" style="display:none;">
+          <label class="field-label" style="margin-top:8px;">Horas realizadas</label>
+          <input type="number" id="logHoursInput" min="0" step="0.5" placeholder="Ej. 3">
+          <p class="help-text">Se computan como el doble: <b id="logHoursPreview" style="color:var(--accent-teal);">0</b> horas generadas.</p>
+        </div>
+        <button class="btn-ember" id="btnAddLogEntry" style="margin-top:4px;">＋ Añadir registro</button>
+      </div>
+
+      <div id="guardLogMonths"></div>
+    </div>
+  </section>
+
+  <!-- ===================== LIBRANZAS ===================== -->
+  <section id="screen-libranzas" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" onclick="history.back()">←</button>
+      <h1>Libranzas</h1>
+    </div>
+    <div class="content">
+      <div class="section-title">Horas (materno)</div>
+      <div class="ficha-card" id="libranzaHoursSummary"></div>
+      <div class="tile">
+        <label class="field-label">Horas gastadas</label>
+        <input type="number" id="hourSpendInput" min="0" step="0.5" placeholder="Ej. 4">
+        <button class="btn-outline" id="btnPickHourSpendDate" style="margin-bottom:6px;">📅 Elegir fecha</button>
+        <div class="card-muted" id="hourSpendDateLabel" style="margin-bottom:10px;">Sin fecha seleccionada</div>
+        <button class="btn-ember" id="btnAddHourSpend">＋ Registrar horas gastadas</button>
+      </div>
+      <div class="section-title">Historial de horas gastadas</div>
+      <div id="libranzaHourSpendsList"></div>
+
+      <div class="section-title">Días de libranza</div>
+      <div class="ficha-card" id="libranzaDaysSummary"></div>
+      <div class="tile">
+        <label class="field-label">Días gastados</label>
+        <input type="number" id="daySpendInput" min="0" step="1" placeholder="Ej. 1" value="1">
+        <button class="btn-outline" id="btnPickDaySpendDate" style="margin-bottom:6px;">📅 Elegir fecha</button>
+        <div class="card-muted" id="daySpendDateLabel" style="margin-bottom:10px;">Sin fecha seleccionada</div>
+        <button class="btn-ember" id="btnAddDaySpend">＋ Registrar día de libranza gastado</button>
+      </div>
+      <div class="section-title">Historial de días gastados</div>
+      <div id="libranzaDaySpendsList"></div>
+
+      <p class="help-text" style="margin-top:14px;">
+        Las horas y días generados se calculan a partir de lo que registres en
+        "Registro de trasplantes y horas" dentro de Guardias.
+      </p>
     </div>
   </section>
 
@@ -389,12 +490,13 @@
 /* ---------- IndexedDB helpers ---------- */
 function openDb(){
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('medic_life_db', 1);
+    const req = indexedDB.open('medic_life_db', 2);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
       const stores = [
         'vacationYears', 'vacationDays', 'holidayDays', 'permisoDays', 'lactanciaDays', 'vacationAnnotations',
-        'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'guardAnnotations'
+        'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'congenitasDays', 'guardAnnotations',
+        'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'
       ];
       stores.forEach(name => {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
@@ -465,6 +567,8 @@ function go(view){
   showScreen(view);
   if (view === 'vacations') renderVacationScreen(currentVacationYear);
   if (view === 'guards') renderGuardScreen(currentGuardYear);
+  if (view === 'guard-log') renderGuardLogScreen(currentGuardYear);
+  if (view === 'libranzas') renderLibranzasScreen();
 }
 function goGuardMonth(year, month){
   history.pushState({ view: 'guard-month', year, month }, '', '#guard-month');
@@ -477,6 +581,8 @@ window.addEventListener('popstate', (e) => {
   if (state.view === 'vacations') renderVacationScreen(currentVacationYear);
   if (state.view === 'guards') renderGuardScreen(currentGuardYear);
   if (state.view === 'guard-month') renderGuardMonthScreen(state.year, state.month);
+  if (state.view === 'guard-log') renderGuardLogScreen(currentGuardYear);
+  if (state.view === 'libranzas') renderLibranzasScreen();
 });
 
 /* ---------- utilidades de calendario ---------- */
@@ -525,6 +631,53 @@ function renderMonthGrid(year, month, editMode, cellInfoFn){
     </div>
   `;
 }
+
+/* ---------- selector de fecha reutilizable (calendario en modal) ---------- */
+let datePickerCallback = null;
+let datePickerYear = new Date().getFullYear();
+let datePickerMonth = new Date().getMonth();
+function openDatePicker(onSelect, presetYear, presetMonth){
+  datePickerCallback = onSelect;
+  datePickerYear = presetYear != null ? presetYear : new Date().getFullYear();
+  datePickerMonth = presetMonth != null ? presetMonth : new Date().getMonth();
+  renderDatePickerCalendar();
+  document.getElementById('datePickerModal').style.display = 'flex';
+}
+function closeDatePicker(){
+  document.getElementById('datePickerModal').style.display = 'none';
+  datePickerCallback = null;
+}
+function renderDatePickerCalendar(){
+  document.getElementById('datePickerLabel').textContent = `${MONTH_NAMES[datePickerMonth]} ${datePickerYear}`;
+  const totalDays = daysInMonth(datePickerYear, datePickerMonth);
+  const offset = firstWeekdayMondayIndex(datePickerYear, datePickerMonth);
+  let cells = '';
+  for (let i = 0; i < offset; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for (let day = 1; day <= totalDays; day++) {
+    const dateStr = `${datePickerYear}-${String(datePickerMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    cells += `<div class="cal-cell cal-editable" data-date="${dateStr}">${day}</div>`;
+  }
+  document.getElementById('datePickerCalendar').innerHTML = cells;
+}
+document.getElementById('datePickerPrevMonth').addEventListener('click', () => {
+  datePickerMonth--;
+  if (datePickerMonth < 0) { datePickerMonth = 11; datePickerYear--; }
+  renderDatePickerCalendar();
+});
+document.getElementById('datePickerNextMonth').addEventListener('click', () => {
+  datePickerMonth++;
+  if (datePickerMonth > 11) { datePickerMonth = 0; datePickerYear++; }
+  renderDatePickerCalendar();
+});
+document.getElementById('datePickerCancel').addEventListener('click', closeDatePicker);
+document.getElementById('datePickerCalendar').addEventListener('click', (e) => {
+  const cell = e.target.closest('.cal-editable');
+  if (!cell) return;
+  const cb = datePickerCallback;
+  const dateStr = cell.dataset.date;
+  closeDatePicker();
+  if (cb) cb(dateStr);
+});
 
 /* ======================================================================
    VACACIONES
@@ -722,32 +875,35 @@ document.getElementById('vacationAnnotationsEditList').addEventListener('click',
    ====================================================================== */
 let currentGuardYear = new Date().getFullYear();
 let currentGuardMonth = new Date().getMonth();
-let primeraEditMode = false, segundaEditMode = false, terceraEditMode = false, pulmonEditMode = false;
+let primeraEditMode = false, segundaEditMode = false, terceraEditMode = false, congenitasEditMode = false, pulmonEditMode = false;
 let guardAnnotationsEditMode = false;
 
 function guardCellInfo(dateStr, sets){
   const isPrimera = sets.primera.has(dateStr);
   const isSegunda = !isPrimera && sets.segunda.has(dateStr);
   const isTercera = !isPrimera && !isSegunda && sets.tercera.has(dateStr);
+  const isCongenitas = !isPrimera && !isSegunda && !isTercera && sets.congenitas.has(dateStr);
   const isPulmon = sets.pulmon.has(dateStr);
   let colorClass = '';
   if (isPrimera) colorClass = 'cal-primera';
   else if (isSegunda) colorClass = 'cal-segunda';
   else if (isTercera) colorClass = 'cal-tercera';
+  else if (isCongenitas) colorClass = 'cal-congenitas';
   const extraHtml = isPulmon ? '<span class="cal-pulmon-mark">P</span>' : '';
   const ringClass = isPulmon ? 'cal-pulmon-ring' : '';
   return { colorClass, extraHtml, ringClass };
 }
 async function getGuardDaySets(){
-  const [allPrimera, allSegunda, allTercera, allPulmon] = await Promise.all([
-    dbGetAll('primeraDays'), dbGetAll('segundaDays'), dbGetAll('terceraDays'), dbGetAll('pulmonDays')
+  const [allPrimera, allSegunda, allTercera, allCongenitas, allPulmon] = await Promise.all([
+    dbGetAll('primeraDays'), dbGetAll('segundaDays'), dbGetAll('terceraDays'), dbGetAll('congenitasDays'), dbGetAll('pulmonDays')
   ]);
-  return { allPrimera, allSegunda, allTercera, allPulmon };
+  return { allPrimera, allSegunda, allTercera, allCongenitas, allPulmon };
 }
 function countGuardTypes(sets, prefix){
   const countIn = (arr) => arr.filter(d => d.dateStr.startsWith(prefix)).length;
-  const primera = countIn(sets.allPrimera), segunda = countIn(sets.allSegunda), tercera = countIn(sets.allTercera), pulmon = countIn(sets.allPulmon);
-  return { primera, segunda, tercera, pulmon, total: primera + segunda + tercera };
+  const primera = countIn(sets.allPrimera), segunda = countIn(sets.allSegunda), tercera = countIn(sets.allTercera),
+        congenitas = countIn(sets.allCongenitas), pulmon = countIn(sets.allPulmon);
+  return { primera, segunda, tercera, congenitas, pulmon, total: primera + segunda + tercera + congenitas };
 }
 function guardSummaryCardHtml(counts, totalLabel){
   return `
@@ -762,6 +918,10 @@ function guardSummaryCardHtml(counts, totalLabel){
     <div class="field-row-view">
       <span class="field-row-label">Tercera</span>
       <span class="field-row-value" style="color:var(--guard-tercera); font-weight:700;">${counts.tercera}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Congénitas</span>
+      <span class="field-row-value" style="color:var(--guard-congenitas); font-weight:700;">${counts.congenitas}</span>
     </div>
     <div class="field-row-view">
       <span class="field-row-label">Pulmón</span>
@@ -787,7 +947,7 @@ async function renderGuardMonthsGrid(year){
     html += `
       <div class="month-tile" data-month="${m}">
         <div class="month-tile-name">${MONTH_NAMES[m]}</div>
-        <div class="month-tile-row"><span>1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · P ${counts.pulmon}</span></div>
+        <div class="month-tile-row"><span>1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon}</span></div>
         <div class="month-tile-row"><span>Total</span><span class="month-tile-total">${counts.total}</span></div>
       </div>
     `;
@@ -796,14 +956,14 @@ async function renderGuardMonthsGrid(year){
 }
 async function renderGuardYearsTable(){
   const sets = await getGuardDaySets();
-  const allYearsSet = new Set([...sets.allPrimera, ...sets.allSegunda, ...sets.allTercera, ...sets.allPulmon].map(d => parseInt(d.dateStr.slice(0, 4))));
+  const allYearsSet = new Set([...sets.allPrimera, ...sets.allSegunda, ...sets.allTercera, ...sets.allCongenitas, ...sets.allPulmon].map(d => parseInt(d.dateStr.slice(0, 4))));
   const years = [...allYearsSet].sort((a, b) => a - b);
   document.getElementById('guardYearsTable').innerHTML = years.map(y => {
     const counts = countGuardTypes(sets, String(y));
     return `
       <div class="field-row-view" data-year="${y}" style="cursor:pointer;">
         <span class="field-row-label">${y}</span>
-        <span class="field-row-value">1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · P ${counts.pulmon} · Total ${counts.total}</span>
+        <span class="field-row-value">1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon} · Total ${counts.total}</span>
       </div>
     `;
   }).join('') || '<p class="help-text" style="padding:10px 0;">Sin guardias marcadas todavía.</p>';
@@ -843,8 +1003,8 @@ async function renderGuardMonthCalendar(year, month){
   const sets = await getGuardDaySets();
   const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const toSet = (arr) => new Set(arr.filter(d => d.dateStr.startsWith(prefix)).map(d => d.dateStr));
-  const cellSets = { primera: toSet(sets.allPrimera), segunda: toSet(sets.allSegunda), tercera: toSet(sets.allTercera), pulmon: toSet(sets.allPulmon) };
-  const editMode = primeraEditMode || segundaEditMode || terceraEditMode || pulmonEditMode;
+  const cellSets = { primera: toSet(sets.allPrimera), segunda: toSet(sets.allSegunda), tercera: toSet(sets.allTercera), congenitas: toSet(sets.allCongenitas), pulmon: toSet(sets.allPulmon) };
+  const editMode = primeraEditMode || segundaEditMode || terceraEditMode || congenitasEditMode || pulmonEditMode;
   document.getElementById('guardMonthCalendar').innerHTML = renderMonthGrid(year, month, editMode, (dateStr) => guardCellInfo(dateStr, cellSets));
 }
 async function renderGuardMonthScreen(year, month){
@@ -859,12 +1019,14 @@ async function renderGuardMonthScreen(year, month){
   document.getElementById('btnTogglePrimeraEdit').textContent = primeraEditMode ? '✅ Cerrar edición' : '✏️ Modificar primera';
   document.getElementById('btnToggleSegundaEdit').textContent = segundaEditMode ? '✅ Cerrar edición' : '✏️ Modificar segunda';
   document.getElementById('btnToggleTerceraEdit').textContent = terceraEditMode ? '✅ Cerrar edición' : '✏️ Modificar tercera';
+  document.getElementById('btnToggleCongenitasEdit').textContent = congenitasEditMode ? '✅ Cerrar edición' : '✏️ Modificar congénitas';
   document.getElementById('btnTogglePulmonEdit').textContent = pulmonEditMode ? '✅ Cerrar edición' : '✏️ Modificar pulmón';
 }
 function setSoleGuardEditMode(mode){
   primeraEditMode = mode === 'primera';
   segundaEditMode = mode === 'segunda';
   terceraEditMode = mode === 'tercera';
+  congenitasEditMode = mode === 'congenitas';
   pulmonEditMode = mode === 'pulmon';
 }
 
@@ -879,6 +1041,7 @@ document.getElementById('guardMonthsGrid').addEventListener('click', (e) => {
 document.getElementById('btnTogglePrimeraEdit').addEventListener('click', () => { setSoleGuardEditMode(primeraEditMode ? null : 'primera'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('btnToggleSegundaEdit').addEventListener('click', () => { setSoleGuardEditMode(segundaEditMode ? null : 'segunda'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('btnToggleTerceraEdit').addEventListener('click', () => { setSoleGuardEditMode(terceraEditMode ? null : 'tercera'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('btnToggleCongenitasEdit').addEventListener('click', () => { setSoleGuardEditMode(congenitasEditMode ? null : 'congenitas'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('btnTogglePulmonEdit').addEventListener('click', () => { setSoleGuardEditMode(pulmonEditMode ? null : 'pulmon'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('guardMonthCalendar').addEventListener('click', async (e) => {
   const cell = e.target.closest('.cal-editable');
@@ -886,6 +1049,7 @@ document.getElementById('guardMonthCalendar').addEventListener('click', async (e
   if (primeraEditMode) await toggleDayInStore('primeraDays', cell.dataset.date);
   else if (segundaEditMode) await toggleDayInStore('segundaDays', cell.dataset.date);
   else if (terceraEditMode) await toggleDayInStore('terceraDays', cell.dataset.date);
+  else if (congenitasEditMode) await toggleDayInStore('congenitasDays', cell.dataset.date);
   else if (pulmonEditMode) await toggleDayInStore('pulmonDays', cell.dataset.date);
   else return;
   await renderGuardMonthScreen(currentGuardYear, currentGuardMonth);
@@ -918,7 +1082,7 @@ document.getElementById('guardAnnotationsEditList').addEventListener('click', as
 });
 
 /* ---------- Guardias: exportar / importar / WhatsApp ---------- */
-const GUARD_STORE_NAMES = ['primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'guardAnnotations'];
+const GUARD_STORE_NAMES = ['primeraDays', 'segundaDays', 'terceraDays', 'congenitasDays', 'pulmonDays', 'guardAnnotations', 'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'];
 async function collectGuardBackup(){
   const backup = { app: 'medic-life', type: 'guardias-backup', exportedAt: new Date().toISOString() };
   for (const store of GUARD_STORE_NAMES) backup[store] = await dbGetAll(store);
@@ -937,16 +1101,16 @@ function triggerDownload(blob, filename){
 async function buildGuardSummaryText(year){
   const sets = await getGuardDaySets();
   let lines = [`📋 Guardias ${year} — Medic Life`, ''];
-  let yearTotal = { primera: 0, segunda: 0, tercera: 0, pulmon: 0 };
+  let yearTotal = { primera: 0, segunda: 0, tercera: 0, congenitas: 0, pulmon: 0 };
   for (let m = 0; m < 12; m++) {
     const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
     const c = countGuardTypes(sets, prefix);
     if (c.total === 0 && c.pulmon === 0) continue;
-    yearTotal.primera += c.primera; yearTotal.segunda += c.segunda; yearTotal.tercera += c.tercera; yearTotal.pulmon += c.pulmon;
-    lines.push(`${MONTH_NAMES[m]}: 1ª ${c.primera} · 2ª ${c.segunda} · 3ª ${c.tercera} · P ${c.pulmon} (Total ${c.total})`);
+    yearTotal.primera += c.primera; yearTotal.segunda += c.segunda; yearTotal.tercera += c.tercera; yearTotal.congenitas += c.congenitas; yearTotal.pulmon += c.pulmon;
+    lines.push(`${MONTH_NAMES[m]}: 1ª ${c.primera} · 2ª ${c.segunda} · 3ª ${c.tercera} · C ${c.congenitas} · P ${c.pulmon} (Total ${c.total})`);
   }
   if (lines.length === 2) lines.push('Sin guardias marcadas este año.');
-  else lines.push('', `Total año: 1ª ${yearTotal.primera} · 2ª ${yearTotal.segunda} · 3ª ${yearTotal.tercera} · P ${yearTotal.pulmon} (Total ${yearTotal.primera + yearTotal.segunda + yearTotal.tercera})`);
+  else lines.push('', `Total año: 1ª ${yearTotal.primera} · 2ª ${yearTotal.segunda} · 3ª ${yearTotal.tercera} · C ${yearTotal.congenitas} · P ${yearTotal.pulmon} (Total ${yearTotal.primera + yearTotal.segunda + yearTotal.tercera + yearTotal.congenitas})`);
   return lines.join('\n');
 }
 async function exportGuardBackupFile(){
@@ -988,7 +1152,7 @@ async function importGuardBackupFile(file){
   }
   const looksValid = data && GUARD_STORE_NAMES.some(s => Array.isArray(data[s]));
   if (!looksValid) { alert('El archivo no tiene el formato esperado de un backup de guardias de Medic Life.'); return; }
-  if (!confirm('Esto reemplazará TODOS los datos de guardias actuales (primera, segunda, tercera, pulmón y anotaciones) por los del archivo importado. ¿Continuar?')) return;
+  if (!confirm('Esto reemplazará TODOS los datos de guardias actuales (primera, segunda, tercera, congénitas, pulmón, anotaciones, registro de trasplantes/horas y libranzas) por los del archivo importado. ¿Continuar?')) return;
   for (const store of GUARD_STORE_NAMES) {
     const existing = await dbGetAll(store);
     for (const item of existing) await dbDelete(store, item.id);
@@ -1005,6 +1169,224 @@ document.getElementById('guardImportInput').addEventListener('change', async (e)
   e.target.value = '';
   if (file) await importGuardBackupFile(file);
 });
+document.getElementById('btnOpenGuardLog').addEventListener('click', () => go('guard-log'));
+
+/* ======================================================================
+   REGISTRO DE GUARDIAS (día por línea): presencia, trasplantes, horas
+   extra materno (cómputo doble) y días de libranza generados.
+   ====================================================================== */
+const GUARD_LOG_CONCEPTS = {
+  presencia: 'Guardia de presencia',
+  tardes: 'Tardes',
+  transplant_uni: 'Trasplante de pulmón (unipulmonar)',
+  transplant_bi: 'Trasplante de pulmón (bipulmonar)',
+  horas_materno: 'Horas extra materno',
+  libranza_generada: 'Día generado de libranza'
+};
+let logSelectedDate = null;
+function renderLogConceptOptions(){
+  document.getElementById('logConceptSelect').innerHTML = Object.entries(GUARD_LOG_CONCEPTS)
+    .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+}
+function updateLogHoursVisibility(){
+  const concept = document.getElementById('logConceptSelect').value;
+  document.getElementById('logHoursRow').style.display = concept === 'horas_materno' ? 'block' : 'none';
+}
+async function renderGuardLogScreen(year){
+  currentGuardYear = year;
+  document.getElementById('guardLogYearLabel').textContent = String(year);
+  const all = await dbGetAll('guardLogEntries');
+  const yearEntries = all.filter(en => en.dateStr.startsWith(String(year)));
+  let html = '';
+  for (let m = 0; m < 12; m++) {
+    const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const monthEntries = yearEntries.filter(en => en.dateStr.startsWith(prefix)).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+    if (monthEntries.length === 0) continue;
+    const uni = monthEntries.filter(en => en.concept === 'transplant_uni').length;
+    const bi = monthEntries.filter(en => en.concept === 'transplant_bi').length;
+    const presencia = monthEntries.filter(en => en.concept === 'presencia').length;
+    const tardes = monthEntries.filter(en => en.concept === 'tardes').length;
+    const libranza = monthEntries.filter(en => en.concept === 'libranza_generada').length;
+    const horasGeneradas = monthEntries.filter(en => en.concept === 'horas_materno').reduce((sum, en) => sum + (en.hours || 0) * 2, 0);
+    html += `
+      <div class="section-title">${MONTH_NAMES[m]}</div>
+      <div class="ficha-card">
+        ${monthEntries.map(en => `
+          <div class="field-row-view">
+            <span class="field-row-label">${formatDateRange(en.dateStr)}</span>
+            <span class="field-row-value">
+              ${escapeHtml(GUARD_LOG_CONCEPTS[en.concept] || en.concept)}${en.concept === 'horas_materno' ? ` (${en.hours}h → ${en.hours * 2}h)` : ''}
+              <button class="icon-btn" data-action="delete-log-entry" data-id="${en.id}" style="color:var(--state-error); padding:2px 4px;">✕</button>
+            </span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="tile" style="margin-bottom:16px;">
+        <div class="field-row-view"><span class="field-row-label">Unipulmonar</span><span class="field-row-value">${uni}</span></div>
+        <div class="field-row-view"><span class="field-row-label">Bipulmonar</span><span class="field-row-value">${bi}</span></div>
+        <div class="field-row-view"><span class="field-row-label">Guardias de presencia</span><span class="field-row-value">${presencia}</span></div>
+        <div class="field-row-view"><span class="field-row-label">Tardes</span><span class="field-row-value">${tardes}</span></div>
+        <div class="field-row-view"><span class="field-row-label">Días de libranza generados</span><span class="field-row-value">${libranza}</span></div>
+        <div class="field-row-view" style="border-bottom:none;"><span class="field-row-label">Horas generadas</span><span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${horasGeneradas}</span></div>
+      </div>
+    `;
+  }
+  document.getElementById('guardLogMonths').innerHTML = html || `<p class="help-text">Sin registros en ${year}.</p>`;
+}
+document.getElementById('btnGuardLogPrevYear').addEventListener('click', () => renderGuardLogScreen(currentGuardYear - 1));
+document.getElementById('btnGuardLogNextYear').addEventListener('click', () => renderGuardLogScreen(currentGuardYear + 1));
+document.getElementById('btnPickLogDate').addEventListener('click', () => {
+  openDatePicker((dateStr) => {
+    logSelectedDate = dateStr;
+    document.getElementById('logSelectedDateLabel').textContent = formatDateRange(dateStr);
+  }, currentGuardYear, new Date().getMonth());
+});
+document.getElementById('logConceptSelect').addEventListener('change', updateLogHoursVisibility);
+document.getElementById('logHoursInput').addEventListener('input', () => {
+  const hours = parseFloat(document.getElementById('logHoursInput').value) || 0;
+  document.getElementById('logHoursPreview').textContent = String(hours * 2);
+});
+document.getElementById('btnAddLogEntry').addEventListener('click', async () => {
+  if (!logSelectedDate) { alert('Elige primero una fecha con el calendario.'); return; }
+  const concept = document.getElementById('logConceptSelect').value;
+  let hours = null;
+  if (concept === 'horas_materno') {
+    hours = parseFloat(document.getElementById('logHoursInput').value);
+    if (!hours || hours <= 0) { alert('Indica las horas realizadas.'); return; }
+  }
+  await dbPut('guardLogEntries', { id: uuid(), dateStr: logSelectedDate, concept, hours, createdAt: Date.now() });
+  logSelectedDate = null;
+  document.getElementById('logSelectedDateLabel').textContent = 'Sin fecha seleccionada';
+  document.getElementById('logHoursInput').value = '';
+  document.getElementById('logHoursPreview').textContent = '0';
+  await renderGuardLogScreen(currentGuardYear);
+});
+document.getElementById('guardLogMonths').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-action="delete-log-entry"]');
+  if (delBtn && confirm('¿Eliminar este registro?')) {
+    await dbDelete('guardLogEntries', delBtn.dataset.id);
+    await renderGuardLogScreen(currentGuardYear);
+  }
+});
+renderLogConceptOptions();
+updateLogHoursVisibility();
+
+/* ======================================================================
+   LIBRANZAS: saldo de horas generadas (materno) y días de libranza
+   generados, menos lo ya gastado. Cada gasto se registra con su fecha
+   (elegida en un calendario) para saber cuándo se usó.
+   ====================================================================== */
+async function computeLibranzasBalance(){
+  const [logEntries, hourSpends, daySpends] = await Promise.all([
+    dbGetAll('guardLogEntries'), dbGetAll('libranzaHourSpends'), dbGetAll('libranzaDaySpends')
+  ]);
+  const horasGeneradas = logEntries.filter(en => en.concept === 'horas_materno').reduce((sum, en) => sum + (en.hours || 0) * 2, 0);
+  const diasGenerados = logEntries.filter(en => en.concept === 'libranza_generada').length;
+  const horasGastadas = hourSpends.reduce((sum, s) => sum + (s.hours || 0), 0);
+  const diasGastados = daySpends.reduce((sum, s) => sum + (s.days || 0), 0);
+  return {
+    horasGeneradas, diasGenerados, horasGastadas, diasGastados,
+    saldoHoras: horasGeneradas - horasGastadas,
+    saldoDias: diasGenerados - diasGastados,
+    hourSpends: hourSpends.sort((a, b) => (b.dateStr || '').localeCompare(a.dateStr || '')),
+    daySpends: daySpends.sort((a, b) => (b.dateStr || '').localeCompare(a.dateStr || ''))
+  };
+}
+async function renderLibranzasScreen(){
+  const b = await computeLibranzasBalance();
+  document.getElementById('libranzaHoursSummary').innerHTML = `
+    <div class="field-row-view">
+      <span class="field-row-label">Horas generadas (materno)</span>
+      <span class="field-row-value">${b.horasGeneradas}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Horas gastadas</span>
+      <span class="field-row-value">${b.horasGastadas}</span>
+    </div>
+    <div class="field-row-view" style="border-bottom:none;">
+      <span class="field-row-label">Saldo de horas</span>
+      <span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${b.saldoHoras}</span>
+    </div>
+  `;
+  document.getElementById('libranzaDaysSummary').innerHTML = `
+    <div class="field-row-view">
+      <span class="field-row-label">Días de libranza generados</span>
+      <span class="field-row-value">${b.diasGenerados}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Días gastados</span>
+      <span class="field-row-value">${b.diasGastados}</span>
+    </div>
+    <div class="field-row-view" style="border-bottom:none;">
+      <span class="field-row-label">Saldo de días</span>
+      <span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${b.saldoDias}</span>
+    </div>
+  `;
+  document.getElementById('libranzaHourSpendsList').innerHTML = b.hourSpends.length === 0
+    ? '<p class="help-text">Sin gastos de horas registrados.</p>'
+    : b.hourSpends.map(s => `
+        <div class="field-row-view">
+          <span class="field-row-label">${formatDateRange(s.dateStr)}</span>
+          <span class="field-row-value">${s.hours} h <button class="icon-btn" data-action="delete-hour-spend" data-id="${s.id}" style="color:var(--state-error); padding:2px 4px;">✕</button></span>
+        </div>
+      `).join('');
+  document.getElementById('libranzaDaySpendsList').innerHTML = b.daySpends.length === 0
+    ? '<p class="help-text">Sin gastos de días registrados.</p>'
+    : b.daySpends.map(s => `
+        <div class="field-row-view">
+          <span class="field-row-label">${formatDateRange(s.dateStr)}</span>
+          <span class="field-row-value">${s.days} día(s) <button class="icon-btn" data-action="delete-day-spend" data-id="${s.id}" style="color:var(--state-error); padding:2px 4px;">✕</button></span>
+        </div>
+      `).join('');
+}
+let libranzaHourSpendDate = null;
+let libranzaDaySpendDate = null;
+document.getElementById('btnPickHourSpendDate').addEventListener('click', () => {
+  openDatePicker((dateStr) => {
+    libranzaHourSpendDate = dateStr;
+    document.getElementById('hourSpendDateLabel').textContent = formatDateRange(dateStr);
+  });
+});
+document.getElementById('btnPickDaySpendDate').addEventListener('click', () => {
+  openDatePicker((dateStr) => {
+    libranzaDaySpendDate = dateStr;
+    document.getElementById('daySpendDateLabel').textContent = formatDateRange(dateStr);
+  });
+});
+document.getElementById('btnAddHourSpend').addEventListener('click', async () => {
+  const hours = parseFloat(document.getElementById('hourSpendInput').value);
+  if (!hours || hours <= 0) { alert('Indica cuántas horas has gastado.'); return; }
+  if (!libranzaHourSpendDate) { alert('Elige la fecha en la que gastaste esas horas.'); return; }
+  await dbPut('libranzaHourSpends', { id: uuid(), dateStr: libranzaHourSpendDate, hours, createdAt: Date.now() });
+  document.getElementById('hourSpendInput').value = '';
+  libranzaHourSpendDate = null;
+  document.getElementById('hourSpendDateLabel').textContent = 'Sin fecha seleccionada';
+  await renderLibranzasScreen();
+});
+document.getElementById('btnAddDaySpend').addEventListener('click', async () => {
+  const days = parseFloat(document.getElementById('daySpendInput').value) || 1;
+  if (!libranzaDaySpendDate) { alert('Elige la fecha en la que gastaste ese día de libranza.'); return; }
+  await dbPut('libranzaDaySpends', { id: uuid(), dateStr: libranzaDaySpendDate, days, createdAt: Date.now() });
+  document.getElementById('daySpendInput').value = '';
+  libranzaDaySpendDate = null;
+  document.getElementById('daySpendDateLabel').textContent = 'Sin fecha seleccionada';
+  await renderLibranzasScreen();
+});
+document.getElementById('libranzaHourSpendsList').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-action="delete-hour-spend"]');
+  if (delBtn && confirm('¿Eliminar este gasto de horas?')) {
+    await dbDelete('libranzaHourSpends', delBtn.dataset.id);
+    await renderLibranzasScreen();
+  }
+});
+document.getElementById('libranzaDaySpendsList').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-action="delete-day-spend"]');
+  if (delBtn && confirm('¿Eliminar este gasto de día?')) {
+    await dbDelete('libranzaDaySpends', delBtn.dataset.id);
+    await renderLibranzasScreen();
+  }
+});
+document.getElementById('btnLibranzas').addEventListener('click', () => go('libranzas'));
 
 /* ======================================================================
    BLOQUEO: PIN local (hash SHA-256 + sal) y desbloqueo biométrico (WebAuthn).

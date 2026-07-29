@@ -141,6 +141,11 @@
     position:absolute; top:0px; right:2px; font-size:7.5px; font-weight:800;
     color:var(--guard-pulmon); line-height:1; text-shadow:0 0 2px rgba(0,0,0,0.8);
   }
+  .cal-day-num{display:inline-flex; align-items:center; justify-content:center;}
+  .cal-pulmon-ring{
+    width:1.7em; height:1.7em; border-radius:50%;
+    border:1.5px solid var(--guard-pulmon); box-sizing:border-box;
+  }
   .cal-legend{display:flex; gap:16px; font-size:12px; color:var(--text-muted); margin-bottom:10px; flex-wrap:wrap; row-gap:6px;}
   .cal-legend span{display:inline-flex; align-items:center; gap:6px;}
   .cal-legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
@@ -500,7 +505,7 @@ function renderMonthGrid(year, month, editMode, cellInfoFn){
     let cls = 'cal-cell';
     if (info.colorClass) cls += ' ' + info.colorClass;
     if (editMode) cls += ' cal-editable';
-    cells += `<div class="${cls}" data-date="${dateStr}">${day}${info.extraHtml || ''}</div>`;
+    cells += `<div class="${cls}" data-date="${dateStr}"><span class="cal-day-num${info.ringClass ? ' ' + info.ringClass : ''}">${day}</span>${info.extraHtml || ''}</div>`;
   }
   return `
     <div class="cal-month">
@@ -720,7 +725,8 @@ function guardCellInfo(dateStr, sets){
   else if (isSegunda) colorClass = 'cal-segunda';
   else if (isTercera) colorClass = 'cal-tercera';
   const extraHtml = isPulmon ? '<span class="cal-pulmon-mark">P</span>' : '';
-  return { colorClass, extraHtml };
+  const ringClass = isPulmon ? 'cal-pulmon-ring' : '';
+  return { colorClass, extraHtml, ringClass };
 }
 async function getGuardDaySets(){
   const [allPrimera, allSegunda, allTercera, allPulmon] = await Promise.all([

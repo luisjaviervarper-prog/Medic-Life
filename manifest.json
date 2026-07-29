@@ -1,7 +1,7 @@
 {
   "name": "Medic Life — Vacaciones y Guardias",
   "short_name": "Medic Life",
-  "start_url": "./MedicLife.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

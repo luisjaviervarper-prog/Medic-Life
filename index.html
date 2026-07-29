@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A1416">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Medic Life</title>
+<style>
+  :root{
+    --bg-obsidian:#0A1416;
+    --bg-ash:#122024;
+    --bg-ash-light:#1B2E33;
+    --accent-teal:#1FB6A6;
+    --accent-deep:#0E7C82;
+    --accent-cyan:#7FE0D4;
+    --text-light:#EAF6F5;
+    --text-muted:#8FA8AA;
+    --state-error:#E03B3B;
+    --guard-primera:#E23B3B;
+    --guard-segunda:#FF8C1F;
+    --guard-tercera:#2FAE60;
+    --guard-pulmon:#F2C94C;
+    --vac-vacation:#2E6FE0;
+    --vac-festivo:#B3121C;
+    --vac-permiso:#D6478F;
+    --vac-lactancia:#8ED0F0;
+    --font-display:'Segoe UI', Arial, sans-serif;
+    --font-condensed:Arial, 'Arial Narrow', sans-serif;
+    --font-body:-apple-system, Roboto, 'Segoe UI', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:linear-gradient(180deg, var(--bg-obsidian), var(--bg-ash));
+    color:var(--text-light);
+    font-family:var(--font-body);
+    min-height:100vh;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .screen{display:none; min-height:100vh; flex-direction:column;}
+  .screen.active{display:flex;}
+  .topbar{
+    display:flex; align-items:center; gap:8px;
+    padding:14px 12px; background:var(--bg-obsidian);
+    border-bottom:1px solid rgba(31,182,166,0.25);
+    position:sticky; top:0; z-index:5;
+  }
+  .topbar h1{
+    font-family:var(--font-condensed); font-weight:700; text-transform:uppercase;
+    letter-spacing:0.03em; font-size:18px; margin:0; flex:1;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .icon-btn{
+    background:none; border:none; color:var(--text-light);
+    font-size:20px; padding:8px; cursor:pointer; line-height:1;
+    border-radius:6px;
+  }
+  .icon-btn:active{background:rgba(255,255,255,0.08);}
+  .content{flex:1; padding:16px; overflow-y:auto;}
+  .center-column{
+    flex:1; display:flex; flex-direction:column; justify-content:center;
+    align-items:center; padding:32px; text-align:center; gap:8px;
+  }
+  .app-title{
+    font-family:var(--font-display); font-weight:800; font-size:38px; text-transform:uppercase;
+    letter-spacing:0.04em; margin:0; color:var(--text-light);
+    text-shadow:0 0 18px rgba(31,182,166,0.35);
+  }
+  .subtitle{color:var(--text-muted); font-size:14px; margin-bottom:24px;}
+  .btn-ember{
+    display:block; width:100%; border:none; border-radius:8px;
+    padding:16px; font-family:var(--font-condensed); font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em; font-size:15px;
+    color:var(--text-light); cursor:pointer;
+    background:linear-gradient(90deg, var(--accent-teal), var(--accent-deep));
+    box-shadow:0 0 16px rgba(31,182,166,0.25);
+    margin-bottom:14px;
+  }
+  .btn-outline{
+    display:block; width:100%; border:1px solid rgba(31,182,166,0.45);
+    border-radius:8px; padding:14px; background:none; color:var(--text-light);
+    font-family:var(--font-condensed); text-transform:uppercase; letter-spacing:0.03em;
+    font-size:13px; cursor:pointer; margin-bottom:10px;
+  }
+  .help-text{color:var(--text-muted); font-size:12.5px; line-height:1.5; max-width:340px;}
+  .logo-mark{margin-bottom:6px; filter:drop-shadow(0 0 12px rgba(31,182,166,0.4));}
+  .section-title{
+    font-family:var(--font-condensed); text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--accent-cyan); font-size:13px; margin:16px 0 8px;
+  }
+  .ficha-card{
+    background:var(--bg-ash); border:1px solid rgba(31,182,166,0.3);
+    border-radius:8px; padding:6px 14px; margin-bottom:10px;
+  }
+  .field-row-view{
+    display:flex; justify-content:space-between; gap:12px;
+    padding:10px 0; border-bottom:1px solid rgba(31,182,166,0.15);
+  }
+  .field-row-view:last-child{border-bottom:none;}
+  .field-row-label{color:var(--text-muted); font-size:12px; text-transform:uppercase; letter-spacing:0.03em;}
+  .field-row-value{font-size:14px; text-align:right; word-break:break-word; max-width:60%;}
+  .card{
+    background:var(--bg-ash); border:1px solid rgba(31,182,166,0.3);
+    border-radius:8px; position:relative; padding:12px; margin-bottom:10px;
+  }
+  .card-title{font-family:var(--font-condensed); font-weight:700; font-size:16px;}
+  .card-muted{color:var(--text-muted); font-size:12.5px; margin-top:2px;}
+  .icon-btn.danger{color:var(--state-error); font-size:16px; position:absolute; top:4px; right:4px; padding:4px 8px;}
+  .tile{
+    background:var(--bg-ash); border:1px solid rgba(31,182,166,0.3);
+    border-radius:8px; padding:14px; margin-bottom:10px;
+  }
+  .cal-month{margin-bottom:16px;}
+  .cal-month-title{
+    font-family:var(--font-condensed); text-transform:uppercase; letter-spacing:0.03em;
+    color:var(--accent-cyan); font-size:13px; margin-bottom:6px;
+  }
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:3px;}
+  .cal-weekdays span{text-align:center; font-size:10px; color:var(--text-muted);}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .cal-cell{
+    position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+    font-size:11px; border-radius:4px; background:var(--bg-ash-light); color:var(--text-light);
+  }
+  .cal-empty{background:none;}
+  .cal-vacation{background:var(--vac-vacation); color:#fff; font-weight:700;}
+  .cal-festivo{background:var(--vac-festivo); color:#fff; font-weight:700;}
+  .cal-permiso{background:var(--vac-permiso); color:#fff; font-weight:700;}
+  .cal-lactancia{background:var(--vac-lactancia); color:#0B0B0D; font-weight:700;}
+  .cal-primera{background:var(--guard-primera); color:#fff; font-weight:700;}
+  .cal-segunda{background:var(--guard-segunda); color:#1a1200; font-weight:700;}
+  .cal-tercera{background:var(--guard-tercera); color:#fff; font-weight:700;}
+  .cal-pulmon-mark{
+    position:absolute; top:0px; right:2px; font-size:7.5px; font-weight:800;
+    color:var(--guard-pulmon); line-height:1; text-shadow:0 0 2px rgba(0,0,0,0.8);
+  }
+  .cal-legend{display:flex; gap:16px; font-size:12px; color:var(--text-muted); margin-bottom:10px; flex-wrap:wrap; row-gap:6px;}
+  .cal-legend span{display:inline-flex; align-items:center; gap:6px;}
+  .cal-legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
+  .cal-editable{cursor:pointer;}
+  .cal-editable:active{outline:2px solid var(--accent-teal);}
+  input[type=text], input[type=number], input[type=date]{
+    width:100%; padding:14px; border-radius:8px; border:1px solid rgba(31,182,166,0.4);
+    background:var(--bg-ash-light); color:var(--text-light); font-size:15px; margin-bottom:12px;
+  }
+  input[type=date]{color-scheme:dark;}
+  label.field-label{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; display:block; margin-bottom:4px;}
+  .toggle-row{display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:13px; margin-bottom:10px;}
+  .months-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:10px;}
+  .month-tile{
+    background:var(--bg-ash); border:1px solid rgba(31,182,166,0.3);
+    border-radius:8px; padding:12px; cursor:pointer;
+  }
+  .month-tile-name{
+    font-family:var(--font-condensed); font-weight:700; text-transform:uppercase;
+    letter-spacing:0.03em; font-size:14px; margin-bottom:6px;
+  }
+  .month-tile-row{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); margin-top:2px;}
+  .month-tile-total{color:var(--accent-teal); font-weight:700;}
+</style>
+</head>
+<body>
+
+  <!-- ===================== BLOQUEO (PIN / huella / rostro) ===================== -->
+  <section id="screen-lock" class="screen active">
+    <div class="center-column">
+      <svg class="logo-mark" viewBox="0 0 100 100" width="72" height="72" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="var(--bg-ash)" stroke="var(--accent-cyan)" stroke-opacity="0.4" stroke-width="1.5"/>
+        <circle cx="36" cy="30" r="6" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <circle cx="62" cy="30" r="6" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <path d="M36 36 Q36 55 50 62" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M62 36 Q62 55 50 62" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M50 62 L50 72" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="50" cy="80" r="11" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <circle cx="50" cy="80" r="4.5" fill="var(--accent-teal)"/>
+      </svg>
+      <h1 class="app-title" style="font-size:30px;">Medic Life</h1>
+
+      <div id="lockSetup" style="width:100%; max-width:320px; display:none;">
+        <p class="help-text">Crea un PIN para proteger tus vacaciones y guardias. Se pedirá cada vez que abras la app.</p>
+        <label class="field-label">Nuevo PIN (4-6 dígitos)</label>
+        <input type="password" id="pinSetupInput" inputmode="numeric" maxlength="6" placeholder="••••">
+        <label class="field-label">Confirmar PIN</label>
+        <input type="password" id="pinSetupConfirm" inputmode="numeric" maxlength="6" placeholder="••••">
+        <div class="help-text" id="pinSetupError" style="color:var(--state-error);"></div>
+        <button class="btn-ember" id="btnSavePin">Guardar PIN</button>
+      </div>
+
+      <div id="lockUnlock" style="width:100%; max-width:320px; display:none;">
+        <p class="help-text">Introduce tu PIN para continuar.</p>
+        <input type="password" id="pinUnlockInput" inputmode="numeric" maxlength="6" placeholder="••••">
+        <div class="help-text" id="pinUnlockError" style="color:var(--state-error);"></div>
+        <button class="btn-ember" id="btnUnlockPin">Desbloquear</button>
+        <button class="btn-outline" id="btnBiometricUnlock" style="display:none;">🔓 Usar huella / rostro</button>
+      </div>
+
+      <div id="biometricOffer" style="width:100%; max-width:320px; display:none;">
+        <p class="help-text">¿Quieres activar el desbloqueo con huella o rostro para no escribir el PIN cada vez? (Solo disponible si abres la app desde una URL https, no desde un archivo local).</p>
+        <button class="btn-ember" id="btnEnableBiometric">Activar huella / rostro</button>
+        <button class="btn-outline" id="btnSkipBiometric">Ahora no</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BIENVENIDA ===================== -->
+  <section id="screen-welcome" class="screen">
+    <div class="center-column">
+      <svg class="logo-mark" viewBox="0 0 100 100" width="88" height="88" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="48" fill="var(--bg-ash)" stroke="var(--accent-cyan)" stroke-opacity="0.4" stroke-width="1.5"/>
+        <circle cx="36" cy="30" r="6" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <circle cx="62" cy="30" r="6" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <path d="M36 36 Q36 55 50 62" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M62 36 Q62 55 50 62" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M50 62 L50 72" fill="none" stroke="var(--accent-teal)" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="50" cy="80" r="11" fill="none" stroke="var(--accent-teal)" stroke-width="3.5"/>
+        <circle cx="50" cy="80" r="4.5" fill="var(--accent-teal)"/>
+      </svg>
+      <h1 class="app-title">Medic Life</h1>
+      <div class="subtitle">Tus vacaciones y guardias, siempre a mano</div>
+      <div style="width:100%; max-width:340px;">
+        <button class="btn-ember" id="btnVacations">🏖 Vacaciones</button>
+        <button class="btn-ember" id="btnGuards">🩺 Guardias</button>
+        <button class="btn-outline" id="btnLockNow">🔒 Bloquear ahora</button>
+        <button class="btn-outline" id="btnResetPin">🔑 Cambiar PIN / huella</button>
+      </div>
+      <p class="help-text">
+        Tus datos se guardan de forma privada en este navegador, en este móvil.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== VACACIONES ===================== -->
+  <section id="screen-vacations" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" onclick="history.back()">←</button>
+      <h1>Vacaciones</h1>
+    </div>
+    <div class="content">
+      <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:14px;">
+        <button class="icon-btn" id="btnVacationPrevYear">◀</button>
+        <span class="app-title" id="vacationYearLabel" style="font-size:22px;">2026</span>
+        <button class="icon-btn" id="btnVacationNextYear">▶</button>
+      </div>
+
+      <div class="ficha-card" id="vacationYearSummary"></div>
+      <div id="vacationAssignedEditRow" style="display:none; gap:8px; align-items:center; margin-bottom:12px;">
+        <input type="number" min="0" id="inputVacationAssigned" placeholder="Días asignados este año" style="margin-bottom:0;">
+        <button class="btn-outline" id="btnSaveVacationAssigned" style="margin-bottom:0; width:auto; white-space:nowrap; padding:14px 18px;">Guardar</button>
+      </div>
+
+      <div class="cal-legend">
+        <span><i style="background:var(--vac-vacation);"></i>Vacaciones</span>
+        <span><i style="background:var(--vac-festivo);"></i>Festivos / fin de semana</span>
+        <span><i style="background:var(--vac-permiso);"></i>Permiso</span>
+        <span><i style="background:var(--vac-lactancia);"></i>Lactancia</span>
+      </div>
+
+      <div id="vacationCalendar"></div>
+
+      <div class="section-title">Anotaciones (año en curso)</div>
+      <div id="vacationAnnotationsView"></div>
+      <div id="vacationAnnotationsEdit" style="display:none;">
+        <div class="tile">
+          <label class="field-label">Desde</label>
+          <input type="date" id="vacationAnnotationStart">
+          <label class="field-label">Hasta</label>
+          <input type="date" id="vacationAnnotationEnd">
+          <label class="field-label">Concepto</label>
+          <input type="text" id="vacationAnnotationConcepto" placeholder="Ej. Viaje médico, mudanza...">
+          <button class="btn-ember" id="btnAddVacationAnnotation" style="margin-top:4px;">＋ Añadir anotación</button>
+        </div>
+        <div id="vacationAnnotationsEditList"></div>
+      </div>
+      <button class="btn-outline" id="btnToggleVacationAnnotationsEdit">✏️ Modificar anotaciones</button>
+
+      <div class="section-title">Resumen por años</div>
+      <div class="ficha-card" id="vacationYearsTable"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <button class="btn-outline" id="btnToggleVacationEdit" style="margin-bottom:0;">✏️ Modificar vacaciones</button>
+        <button class="btn-outline" id="btnToggleFestivoEdit" style="margin-bottom:0;">✏️ Modificar festivos</button>
+        <button class="btn-outline" id="btnTogglePermisoEdit" style="margin-bottom:0;">✏️ Modificar permiso</button>
+        <button class="btn-outline" id="btnToggleLactanciaEdit" style="margin-bottom:0;">✏️ Modificar lactancia</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GUARDIAS ===================== -->
+  <section id="screen-guards" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" onclick="history.back()">←</button>
+      <h1>Guardias</h1>
+    </div>
+    <div class="content">
+      <div style="display:flex; align-items:center; justify-content:center; gap:20px; margin-bottom:14px;">
+        <button class="icon-btn" id="btnGuardPrevYear">◀</button>
+        <span class="app-title" id="guardYearLabel" style="font-size:22px;">2026</span>
+        <button class="icon-btn" id="btnGuardNextYear">▶</button>
+      </div>
+
+      <div class="ficha-card" id="guardYearSummary"></div>
+
+      <div class="cal-legend">
+        <span><i style="background:var(--guard-primera);"></i>Primera</span>
+        <span><i style="background:var(--guard-segunda);"></i>Segunda</span>
+        <span><i style="background:var(--guard-tercera);"></i>Tercera</span>
+        <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
+      </div>
+
+      <div class="section-title">Meses (toca uno para ver y marcar guardias)</div>
+      <div class="months-grid" id="guardMonthsGrid"></div>
+
+      <div class="section-title">Anotaciones (año en curso)</div>
+      <div id="guardAnnotationsView"></div>
+      <div id="guardAnnotationsEdit" style="display:none;">
+        <div class="tile">
+          <label class="field-label">Desde</label>
+          <input type="date" id="guardAnnotationStart">
+          <label class="field-label">Hasta</label>
+          <input type="date" id="guardAnnotationEnd">
+          <label class="field-label">Concepto</label>
+          <input type="text" id="guardAnnotationConcepto" placeholder="Ej. Cambio de guardia, curso...">
+          <button class="btn-ember" id="btnAddGuardAnnotation" style="margin-top:4px;">＋ Añadir anotación</button>
+        </div>
+        <div id="guardAnnotationsEditList"></div>
+      </div>
+      <button class="btn-outline" id="btnToggleGuardAnnotationsEdit">✏️ Modificar anotaciones</button>
+
+      <div class="section-title">Resumen por años</div>
+      <div class="ficha-card" id="guardYearsTable"></div>
+    </div>
+  </section>
+
+  <!-- ===================== GUARDIAS: DETALLE DE MES ===================== -->
+  <section id="screen-guard-month" class="screen">
+    <div class="topbar">
+      <button class="icon-btn" onclick="history.back()">←</button>
+      <h1 id="guardMonthTitle">Mes</h1>
+    </div>
+    <div class="content">
+      <div class="ficha-card" id="guardMonthSummary"></div>
+
+      <div class="cal-legend">
+        <span><i style="background:var(--guard-primera);"></i>Primera</span>
+        <span><i style="background:var(--guard-segunda);"></i>Segunda</span>
+        <span><i style="background:var(--guard-tercera);"></i>Tercera</span>
+        <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
+      </div>
+
+      <div id="guardMonthCalendar"></div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;">
+        <button class="btn-outline" id="btnTogglePrimeraEdit" style="margin-bottom:0;">✏️ Modificar primera</button>
+        <button class="btn-outline" id="btnToggleSegundaEdit" style="margin-bottom:0;">✏️ Modificar segunda</button>
+        <button class="btn-outline" id="btnToggleTerceraEdit" style="margin-bottom:0;">✏️ Modificar tercera</button>
+        <button class="btn-outline" id="btnTogglePulmonEdit" style="margin-bottom:0;">✏️ Modificar pulmón</button>
+      </div>
+    </div>
+  </section>
+
+<script>
+/* ======================================================================
+   Medic Life — app HTML autocontenida (sin dependencias externas).
+   Persistencia: IndexedDB (privada de este navegador, en este móvil).
+   ====================================================================== */
+
+/* ---------- IndexedDB helpers ---------- */
+function openDb(){
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('medic_life_db', 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      const stores = [
+        'vacationYears', 'vacationDays', 'holidayDays', 'permisoDays', 'lactanciaDays', 'vacationAnnotations',
+        'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'guardAnnotations'
+      ];
+      stores.forEach(name => {
+        if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
+      });
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+let _dbInstance = null;
+async function getDb(){ if (!_dbInstance) _dbInstance = await openDb(); return _dbInstance; }
+async function dbGetAll(storeName){
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbGet(storeName, key){
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function dbPut(storeName, value){
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(value);
+    tx.oncomplete = () => resolve(value);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+async function dbDelete(storeName, key){
+  const db = await getDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function uuid(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+function escapeHtml(str){
+  if (str == null) return '';
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ---------- navegación ---------- */
+function showScreen(view){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + view);
+  if (el) el.classList.add('active');
+}
+function go(view){
+  history.pushState({ view }, '', '#' + view);
+  showScreen(view);
+  if (view === 'vacations') renderVacationScreen(currentVacationYear);
+  if (view === 'guards') renderGuardScreen(currentGuardYear);
+}
+function goGuardMonth(year, month){
+  history.pushState({ view: 'guard-month', year, month }, '', '#guard-month');
+  showScreen('guard-month');
+  renderGuardMonthScreen(year, month);
+}
+window.addEventListener('popstate', (e) => {
+  const state = e.state || { view: 'welcome' };
+  showScreen(state.view);
+  if (state.view === 'vacations') renderVacationScreen(currentVacationYear);
+  if (state.view === 'guards') renderGuardScreen(currentGuardYear);
+  if (state.view === 'guard-month') renderGuardMonthScreen(state.year, state.month);
+});
+
+/* ---------- utilidades de calendario ---------- */
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const WEEKDAY_LETTERS = ['L','M','X','J','V','S','D'];
+function daysInMonth(year, month){ return new Date(year, month + 1, 0).getDate(); }
+function firstWeekdayMondayIndex(year, month){
+  const d = new Date(year, month, 1).getDay();
+  return (d + 6) % 7;
+}
+function isWeekendDate(dateStr){
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const day = new Date(y, m - 1, d).getDay();
+  return day === 0 || day === 6;
+}
+function formatDateRange(start, end){
+  const fmt = (s) => { const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`; };
+  if (!start) return '';
+  if (!end || end === start) return fmt(start);
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+function annotationYearMatches(a, year){
+  const startYear = parseInt((a.startDate || '').slice(0, 4));
+  const endYear = parseInt((a.endDate || a.startDate || '').slice(0, 4));
+  if (isNaN(startYear)) return false;
+  return year >= startYear && year <= (isNaN(endYear) ? startYear : endYear);
+}
+function renderMonthGrid(year, month, editMode, cellInfoFn){
+  const totalDays = daysInMonth(year, month);
+  const offset = firstWeekdayMondayIndex(year, month);
+  let cells = '';
+  for (let i = 0; i < offset; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for (let day = 1; day <= totalDays; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const info = cellInfoFn(dateStr);
+    let cls = 'cal-cell';
+    if (info.colorClass) cls += ' ' + info.colorClass;
+    if (editMode) cls += ' cal-editable';
+    cells += `<div class="${cls}" data-date="${dateStr}">${day}${info.extraHtml || ''}</div>`;
+  }
+  return `
+    <div class="cal-month">
+      <div class="cal-month-title">${MONTH_NAMES[month]}</div>
+      <div class="cal-weekdays">${WEEKDAY_LETTERS.map(w => `<span>${w}</span>`).join('')}</div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+  `;
+}
+
+/* ======================================================================
+   VACACIONES
+   ====================================================================== */
+let currentVacationYear = new Date().getFullYear();
+let vacationEditMode = false, festivoEditMode = false, permisoEditMode = false, lactanciaEditMode = false;
+let vacationAnnotationsEditMode = false;
+
+async function getVacationYearRecord(year){
+  const all = await dbGetAll('vacationYears');
+  return all.find(y => y.year === year) || null;
+}
+async function ensureVacationYearRecord(year){
+  let record = await getVacationYearRecord(year);
+  if (!record) { record = { id: uuid(), year, assignedDays: 0 }; await dbPut('vacationYears', record); }
+  return record;
+}
+async function setVacationYearAssignedDays(year, days){
+  const record = await ensureVacationYearRecord(year);
+  record.assignedDays = days;
+  await dbPut('vacationYears', record);
+}
+async function toggleDayInStore(storeName, dateStr){
+  const all = await dbGetAll(storeName);
+  const existing = all.find(d => d.dateStr === dateStr);
+  if (existing) await dbDelete(storeName, existing.id);
+  else await dbPut(storeName, { id: uuid(), dateStr });
+}
+async function addAnnotationTo(storeName, startDate, endDate, concepto){
+  const annotation = { id: uuid(), startDate, endDate: endDate || startDate, concepto, createdAt: Date.now() };
+  await dbPut(storeName, annotation);
+  return annotation;
+}
+
+function vacationCellInfo(dateStr, sets){
+  const isVacation = sets.vacation.has(dateStr);
+  const isLactancia = !isVacation && sets.lactancia.has(dateStr);
+  const isPermiso = !isVacation && !isLactancia && sets.permiso.has(dateStr);
+  const isFestivo = !isVacation && !isLactancia && !isPermiso && (sets.holiday.has(dateStr) || isWeekendDate(dateStr));
+  let colorClass = '';
+  if (isVacation) colorClass = 'cal-vacation';
+  else if (isLactancia) colorClass = 'cal-lactancia';
+  else if (isPermiso) colorClass = 'cal-permiso';
+  else if (isFestivo) colorClass = 'cal-festivo';
+  return { colorClass };
+}
+async function renderVacationYearSummary(year){
+  const yearRecord = await getVacationYearRecord(year);
+  const assigned = yearRecord ? yearRecord.assignedDays : 0;
+  const allDays = await dbGetAll('vacationDays');
+  const taken = allDays.filter(d => d.dateStr.startsWith(String(year))).length;
+  document.getElementById('vacationYearSummary').innerHTML = `
+    <div class="field-row-view">
+      <span class="field-row-label">Días al inicio del año ${year}</span>
+      <span class="field-row-value">${assigned}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Disfrutados</span>
+      <span class="field-row-value">${taken}</span>
+    </div>
+    <div class="field-row-view" style="border-bottom:none;">
+      <span class="field-row-label">Restantes</span>
+      <span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${assigned - taken}</span>
+    </div>
+  `;
+  document.getElementById('inputVacationAssigned').value = assigned || '';
+}
+async function renderVacationCalendar(year){
+  const [allVacation, allHolidays, allPermiso, allLactancia] = await Promise.all([
+    dbGetAll('vacationDays'), dbGetAll('holidayDays'), dbGetAll('permisoDays'), dbGetAll('lactanciaDays')
+  ]);
+  const toSet = (arr) => new Set(arr.filter(d => d.dateStr.startsWith(String(year))).map(d => d.dateStr));
+  const sets = { vacation: toSet(allVacation), holiday: toSet(allHolidays), permiso: toSet(allPermiso), lactancia: toSet(allLactancia) };
+  const editMode = vacationEditMode || festivoEditMode || permisoEditMode || lactanciaEditMode;
+  let html = '';
+  for (let m = 0; m < 12; m++) html += renderMonthGrid(year, m, editMode, (dateStr) => vacationCellInfo(dateStr, sets));
+  document.getElementById('vacationCalendar').innerHTML = html;
+}
+async function renderVacationYearsTable(){
+  const yearRecords = await dbGetAll('vacationYears');
+  const allDays = await dbGetAll('vacationDays');
+  const yearsWithDays = new Set(allDays.map(d => parseInt(d.dateStr.slice(0, 4))));
+  const years = [...yearsWithDays].sort((a, b) => a - b);
+  const recordMap = Object.fromEntries(yearRecords.map(y => [y.year, y]));
+  document.getElementById('vacationYearsTable').innerHTML = years.map(y => {
+    const assigned = recordMap[y] ? recordMap[y].assignedDays : 0;
+    const taken = allDays.filter(d => d.dateStr.startsWith(String(y))).length;
+    return `
+      <div class="field-row-view" data-year="${y}" style="cursor:pointer;">
+        <span class="field-row-label">${y}</span>
+        <span class="field-row-value">Asig. ${assigned} · Disf. ${taken} · Rest. ${assigned - taken}</span>
+      </div>
+    `;
+  }).join('') || '<p class="help-text" style="padding:10px 0;">Sin días de vacaciones marcados todavía.</p>';
+}
+async function renderVacationAnnotations(year){
+  const items = (await dbGetAll('vacationAnnotations')).filter(a => annotationYearMatches(a, year));
+  items.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  const view = document.getElementById('vacationAnnotationsView');
+  view.innerHTML = items.length === 0
+    ? '<p class="help-text">Sin anotaciones en ' + year + '.</p>'
+    : items.map(a => `
+        <div class="field-row-view">
+          <span class="field-row-label">${formatDateRange(a.startDate, a.endDate)}</span>
+          <span class="field-row-value">${escapeHtml(a.concepto)}</span>
+        </div>
+      `).join('');
+  document.getElementById('vacationAnnotationsEditList').innerHTML = items.map(a => `
+    <div class="card">
+      <button class="icon-btn danger" data-action="delete-vacation-annotation" data-id="${a.id}">✕</button>
+      <div class="card-title">${formatDateRange(a.startDate, a.endDate)}</div>
+      <div class="card-muted">${escapeHtml(a.concepto)}</div>
+    </div>
+  `).join('');
+}
+async function renderVacationScreen(year){
+  currentVacationYear = year;
+  await ensureVacationYearRecord(year);
+  document.getElementById('vacationYearLabel').textContent = String(year);
+  await renderVacationYearSummary(year);
+  await renderVacationCalendar(year);
+  await renderVacationAnnotations(year);
+  await renderVacationYearsTable();
+  document.getElementById('btnToggleVacationEdit').textContent = vacationEditMode ? '✅ Cerrar edición' : '✏️ Modificar vacaciones';
+  document.getElementById('btnToggleFestivoEdit').textContent = festivoEditMode ? '✅ Cerrar edición' : '✏️ Modificar festivos';
+  document.getElementById('btnTogglePermisoEdit').textContent = permisoEditMode ? '✅ Cerrar edición' : '✏️ Modificar permiso';
+  document.getElementById('btnToggleLactanciaEdit').textContent = lactanciaEditMode ? '✅ Cerrar edición' : '✏️ Modificar lactancia';
+  document.getElementById('vacationAssignedEditRow').style.display = vacationEditMode ? 'flex' : 'none';
+  document.getElementById('vacationAnnotationsView').style.display = vacationAnnotationsEditMode ? 'none' : 'block';
+  document.getElementById('vacationAnnotationsEdit').style.display = vacationAnnotationsEditMode ? 'block' : 'none';
+  document.getElementById('btnToggleVacationAnnotationsEdit').textContent = vacationAnnotationsEditMode ? '✅ Cerrar edición' : '✏️ Modificar anotaciones';
+}
+function setSoleVacationEditMode(mode){
+  vacationEditMode = mode === 'vacation';
+  festivoEditMode = mode === 'festivo';
+  permisoEditMode = mode === 'permiso';
+  lactanciaEditMode = mode === 'lactancia';
+}
+
+/* eventos: Vacaciones */
+document.getElementById('btnVacations').addEventListener('click', () => go('vacations'));
+document.getElementById('btnVacationPrevYear').addEventListener('click', () => renderVacationScreen(currentVacationYear - 1));
+document.getElementById('btnVacationNextYear').addEventListener('click', () => renderVacationScreen(currentVacationYear + 1));
+document.getElementById('btnToggleVacationEdit').addEventListener('click', () => { setSoleVacationEditMode(vacationEditMode ? null : 'vacation'); renderVacationScreen(currentVacationYear); });
+document.getElementById('btnToggleFestivoEdit').addEventListener('click', () => { setSoleVacationEditMode(festivoEditMode ? null : 'festivo'); renderVacationScreen(currentVacationYear); });
+document.getElementById('btnTogglePermisoEdit').addEventListener('click', () => { setSoleVacationEditMode(permisoEditMode ? null : 'permiso'); renderVacationScreen(currentVacationYear); });
+document.getElementById('btnToggleLactanciaEdit').addEventListener('click', () => { setSoleVacationEditMode(lactanciaEditMode ? null : 'lactancia'); renderVacationScreen(currentVacationYear); });
+document.getElementById('btnSaveVacationAssigned').addEventListener('click', async () => {
+  const days = parseInt(document.getElementById('inputVacationAssigned').value) || 0;
+  await setVacationYearAssignedDays(currentVacationYear, days);
+  await renderVacationYearSummary(currentVacationYear);
+  await renderVacationYearsTable();
+});
+document.getElementById('vacationCalendar').addEventListener('click', async (e) => {
+  const cell = e.target.closest('.cal-editable');
+  if (!cell) return;
+  if (vacationEditMode) await toggleDayInStore('vacationDays', cell.dataset.date);
+  else if (festivoEditMode) await toggleDayInStore('holidayDays', cell.dataset.date);
+  else if (permisoEditMode) await toggleDayInStore('permisoDays', cell.dataset.date);
+  else if (lactanciaEditMode) await toggleDayInStore('lactanciaDays', cell.dataset.date);
+  else return;
+  await renderVacationYearSummary(currentVacationYear);
+  await renderVacationCalendar(currentVacationYear);
+  await renderVacationYearsTable();
+});
+document.getElementById('vacationYearsTable').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-year]');
+  if (row) renderVacationScreen(parseInt(row.dataset.year));
+});
+document.getElementById('btnToggleVacationAnnotationsEdit').addEventListener('click', () => {
+  vacationAnnotationsEditMode = !vacationAnnotationsEditMode;
+  renderVacationScreen(currentVacationYear);
+});
+document.getElementById('btnAddVacationAnnotation').addEventListener('click', async () => {
+  const start = document.getElementById('vacationAnnotationStart').value;
+  const end = document.getElementById('vacationAnnotationEnd').value;
+  const concepto = document.getElementById('vacationAnnotationConcepto').value.trim();
+  if (!start || !concepto) { alert('Rellena al menos la fecha "Desde" y el concepto.'); return; }
+  await addAnnotationTo('vacationAnnotations', start, end, concepto);
+  document.getElementById('vacationAnnotationStart').value = '';
+  document.getElementById('vacationAnnotationEnd').value = '';
+  document.getElementById('vacationAnnotationConcepto').value = '';
+  await renderVacationAnnotations(currentVacationYear);
+});
+document.getElementById('vacationAnnotationsEditList').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-action="delete-vacation-annotation"]');
+  if (delBtn && confirm('¿Eliminar esta anotación?')) {
+    await dbDelete('vacationAnnotations', delBtn.dataset.id);
+    await renderVacationAnnotations(currentVacationYear);
+  }
+});
+
+/* ======================================================================
+   GUARDIAS
+   ====================================================================== */
+let currentGuardYear = new Date().getFullYear();
+let currentGuardMonth = new Date().getMonth();
+let primeraEditMode = false, segundaEditMode = false, terceraEditMode = false, pulmonEditMode = false;
+let guardAnnotationsEditMode = false;
+
+function guardCellInfo(dateStr, sets){
+  const isPrimera = sets.primera.has(dateStr);
+  const isSegunda = !isPrimera && sets.segunda.has(dateStr);
+  const isTercera = !isPrimera && !isSegunda && sets.tercera.has(dateStr);
+  const isPulmon = sets.pulmon.has(dateStr);
+  let colorClass = '';
+  if (isPrimera) colorClass = 'cal-primera';
+  else if (isSegunda) colorClass = 'cal-segunda';
+  else if (isTercera) colorClass = 'cal-tercera';
+  const extraHtml = isPulmon ? '<span class="cal-pulmon-mark">P</span>' : '';
+  return { colorClass, extraHtml };
+}
+async function getGuardDaySets(){
+  const [allPrimera, allSegunda, allTercera, allPulmon] = await Promise.all([
+    dbGetAll('primeraDays'), dbGetAll('segundaDays'), dbGetAll('terceraDays'), dbGetAll('pulmonDays')
+  ]);
+  return { allPrimera, allSegunda, allTercera, allPulmon };
+}
+function countGuardTypes(sets, prefix){
+  const countIn = (arr) => arr.filter(d => d.dateStr.startsWith(prefix)).length;
+  const primera = countIn(sets.allPrimera), segunda = countIn(sets.allSegunda), tercera = countIn(sets.allTercera), pulmon = countIn(sets.allPulmon);
+  return { primera, segunda, tercera, pulmon, total: primera + segunda + tercera };
+}
+function guardSummaryCardHtml(counts, totalLabel){
+  return `
+    <div class="field-row-view">
+      <span class="field-row-label">Primera</span>
+      <span class="field-row-value" style="color:var(--guard-primera); font-weight:700;">${counts.primera}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Segunda</span>
+      <span class="field-row-value" style="color:var(--guard-segunda); font-weight:700;">${counts.segunda}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Tercera</span>
+      <span class="field-row-value" style="color:var(--guard-tercera); font-weight:700;">${counts.tercera}</span>
+    </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Pulmón</span>
+      <span class="field-row-value" style="color:var(--guard-pulmon); font-weight:700;">${counts.pulmon}</span>
+    </div>
+    <div class="field-row-view" style="border-bottom:none;">
+      <span class="field-row-label">${totalLabel}</span>
+      <span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${counts.total}</span>
+    </div>
+  `;
+}
+async function renderGuardYearSummary(year){
+  const sets = await getGuardDaySets();
+  const counts = countGuardTypes(sets, String(year));
+  document.getElementById('guardYearSummary').innerHTML = guardSummaryCardHtml(counts, `Total guardias ${year}`);
+}
+async function renderGuardMonthsGrid(year){
+  const sets = await getGuardDaySets();
+  let html = '';
+  for (let m = 0; m < 12; m++) {
+    const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const counts = countGuardTypes(sets, prefix);
+    html += `
+      <div class="month-tile" data-month="${m}">
+        <div class="month-tile-name">${MONTH_NAMES[m]}</div>
+        <div class="month-tile-row"><span>1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · P ${counts.pulmon}</span></div>
+        <div class="month-tile-row"><span>Total</span><span class="month-tile-total">${counts.total}</span></div>
+      </div>
+    `;
+  }
+  document.getElementById('guardMonthsGrid').innerHTML = html;
+}
+async function renderGuardYearsTable(){
+  const sets = await getGuardDaySets();
+  const allYearsSet = new Set([...sets.allPrimera, ...sets.allSegunda, ...sets.allTercera, ...sets.allPulmon].map(d => parseInt(d.dateStr.slice(0, 4))));
+  const years = [...allYearsSet].sort((a, b) => a - b);
+  document.getElementById('guardYearsTable').innerHTML = years.map(y => {
+    const counts = countGuardTypes(sets, String(y));
+    return `
+      <div class="field-row-view" data-year="${y}" style="cursor:pointer;">
+        <span class="field-row-label">${y}</span>
+        <span class="field-row-value">1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · P ${counts.pulmon} · Total ${counts.total}</span>
+      </div>
+    `;
+  }).join('') || '<p class="help-text" style="padding:10px 0;">Sin guardias marcadas todavía.</p>';
+}
+async function renderGuardAnnotations(year){
+  const items = (await dbGetAll('guardAnnotations')).filter(a => annotationYearMatches(a, year));
+  items.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  const view = document.getElementById('guardAnnotationsView');
+  view.innerHTML = items.length === 0
+    ? '<p class="help-text">Sin anotaciones en ' + year + '.</p>'
+    : items.map(a => `
+        <div class="field-row-view">
+          <span class="field-row-label">${formatDateRange(a.startDate, a.endDate)}</span>
+          <span class="field-row-value">${escapeHtml(a.concepto)}</span>
+        </div>
+      `).join('');
+  document.getElementById('guardAnnotationsEditList').innerHTML = items.map(a => `
+    <div class="card">
+      <button class="icon-btn danger" data-action="delete-guard-annotation" data-id="${a.id}">✕</button>
+      <div class="card-title">${formatDateRange(a.startDate, a.endDate)}</div>
+      <div class="card-muted">${escapeHtml(a.concepto)}</div>
+    </div>
+  `).join('');
+}
+async function renderGuardScreen(year){
+  currentGuardYear = year;
+  document.getElementById('guardYearLabel').textContent = String(year);
+  await renderGuardYearSummary(year);
+  await renderGuardMonthsGrid(year);
+  await renderGuardAnnotations(year);
+  await renderGuardYearsTable();
+  document.getElementById('guardAnnotationsView').style.display = guardAnnotationsEditMode ? 'none' : 'block';
+  document.getElementById('guardAnnotationsEdit').style.display = guardAnnotationsEditMode ? 'block' : 'none';
+  document.getElementById('btnToggleGuardAnnotationsEdit').textContent = guardAnnotationsEditMode ? '✅ Cerrar edición' : '✏️ Modificar anotaciones';
+}
+async function renderGuardMonthCalendar(year, month){
+  const sets = await getGuardDaySets();
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const toSet = (arr) => new Set(arr.filter(d => d.dateStr.startsWith(prefix)).map(d => d.dateStr));
+  const cellSets = { primera: toSet(sets.allPrimera), segunda: toSet(sets.allSegunda), tercera: toSet(sets.allTercera), pulmon: toSet(sets.allPulmon) };
+  const editMode = primeraEditMode || segundaEditMode || terceraEditMode || pulmonEditMode;
+  document.getElementById('guardMonthCalendar').innerHTML = renderMonthGrid(year, month, editMode, (dateStr) => guardCellInfo(dateStr, cellSets));
+}
+async function renderGuardMonthScreen(year, month){
+  currentGuardYear = year;
+  currentGuardMonth = month;
+  document.getElementById('guardMonthTitle').textContent = `${MONTH_NAMES[month]} ${year}`;
+  const sets = await getGuardDaySets();
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const counts = countGuardTypes(sets, prefix);
+  document.getElementById('guardMonthSummary').innerHTML = guardSummaryCardHtml(counts, `Total guardias ${MONTH_NAMES[month]}`);
+  await renderGuardMonthCalendar(year, month);
+  document.getElementById('btnTogglePrimeraEdit').textContent = primeraEditMode ? '✅ Cerrar edición' : '✏️ Modificar primera';
+  document.getElementById('btnToggleSegundaEdit').textContent = segundaEditMode ? '✅ Cerrar edición' : '✏️ Modificar segunda';
+  document.getElementById('btnToggleTerceraEdit').textContent = terceraEditMode ? '✅ Cerrar edición' : '✏️ Modificar tercera';
+  document.getElementById('btnTogglePulmonEdit').textContent = pulmonEditMode ? '✅ Cerrar edición' : '✏️ Modificar pulmón';
+}
+function setSoleGuardEditMode(mode){
+  primeraEditMode = mode === 'primera';
+  segundaEditMode = mode === 'segunda';
+  terceraEditMode = mode === 'tercera';
+  pulmonEditMode = mode === 'pulmon';
+}
+
+/* eventos: Guardias */
+document.getElementById('btnGuards').addEventListener('click', () => go('guards'));
+document.getElementById('btnGuardPrevYear').addEventListener('click', () => renderGuardScreen(currentGuardYear - 1));
+document.getElementById('btnGuardNextYear').addEventListener('click', () => renderGuardScreen(currentGuardYear + 1));
+document.getElementById('guardMonthsGrid').addEventListener('click', (e) => {
+  const tile = e.target.closest('.month-tile');
+  if (tile) goGuardMonth(currentGuardYear, parseInt(tile.dataset.month));
+});
+document.getElementById('btnTogglePrimeraEdit').addEventListener('click', () => { setSoleGuardEditMode(primeraEditMode ? null : 'primera'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('btnToggleSegundaEdit').addEventListener('click', () => { setSoleGuardEditMode(segundaEditMode ? null : 'segunda'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('btnToggleTerceraEdit').addEventListener('click', () => { setSoleGuardEditMode(terceraEditMode ? null : 'tercera'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('btnTogglePulmonEdit').addEventListener('click', () => { setSoleGuardEditMode(pulmonEditMode ? null : 'pulmon'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('guardMonthCalendar').addEventListener('click', async (e) => {
+  const cell = e.target.closest('.cal-editable');
+  if (!cell) return;
+  if (primeraEditMode) await toggleDayInStore('primeraDays', cell.dataset.date);
+  else if (segundaEditMode) await toggleDayInStore('segundaDays', cell.dataset.date);
+  else if (terceraEditMode) await toggleDayInStore('terceraDays', cell.dataset.date);
+  else if (pulmonEditMode) await toggleDayInStore('pulmonDays', cell.dataset.date);
+  else return;
+  await renderGuardMonthScreen(currentGuardYear, currentGuardMonth);
+});
+document.getElementById('guardYearsTable').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-year]');
+  if (row) renderGuardScreen(parseInt(row.dataset.year));
+});
+document.getElementById('btnToggleGuardAnnotationsEdit').addEventListener('click', () => {
+  guardAnnotationsEditMode = !guardAnnotationsEditMode;
+  renderGuardScreen(currentGuardYear);
+});
+document.getElementById('btnAddGuardAnnotation').addEventListener('click', async () => {
+  const start = document.getElementById('guardAnnotationStart').value;
+  const end = document.getElementById('guardAnnotationEnd').value;
+  const concepto = document.getElementById('guardAnnotationConcepto').value.trim();
+  if (!start || !concepto) { alert('Rellena al menos la fecha "Desde" y el concepto.'); return; }
+  await addAnnotationTo('guardAnnotations', start, end, concepto);
+  document.getElementById('guardAnnotationStart').value = '';
+  document.getElementById('guardAnnotationEnd').value = '';
+  document.getElementById('guardAnnotationConcepto').value = '';
+  await renderGuardAnnotations(currentGuardYear);
+});
+document.getElementById('guardAnnotationsEditList').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-action="delete-guard-annotation"]');
+  if (delBtn && confirm('¿Eliminar esta anotación?')) {
+    await dbDelete('guardAnnotations', delBtn.dataset.id);
+    await renderGuardAnnotations(currentGuardYear);
+  }
+});
+
+/* ======================================================================
+   BLOQUEO: PIN local (hash SHA-256 + sal) y desbloqueo biométrico (WebAuthn).
+   El PIN nunca se guarda en claro, solo su hash. Todo ocurre en local,
+   en este navegador — Medic Life no tiene servidor ni envía nada fuera.
+   ====================================================================== */
+const PIN_SALT_KEY = 'mediclife_pin_salt';
+const PIN_HASH_KEY = 'mediclife_pin_hash';
+const WEBAUTHN_CRED_KEY = 'mediclife_webauthn_cred_id';
+
+function randomBytes(len){
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return arr;
+}
+function bytesToHex(bytes){
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function hexToBytes(hex){
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+function bytesToB64url(bytes){
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlToBytes(b64url){
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64);
+  return Uint8Array.from(bin, c => c.charCodeAt(0));
+}
+async function hashPin(pin, saltBytes){
+  const enc = new TextEncoder().encode(pin);
+  const combined = new Uint8Array(enc.length + saltBytes.length);
+  combined.set(enc, 0);
+  combined.set(saltBytes, enc.length);
+  const digest = await crypto.subtle.digest('SHA-256', combined);
+  return bytesToHex(new Uint8Array(digest));
+}
+function hasPinConfigured(){ return !!localStorage.getItem(PIN_HASH_KEY); }
+async function savePin(pin){
+  const salt = randomBytes(16);
+  const hash = await hashPin(pin, salt);
+  localStorage.setItem(PIN_SALT_KEY, bytesToHex(salt));
+  localStorage.setItem(PIN_HASH_KEY, hash);
+}
+async function verifyPin(pin){
+  const saltHex = localStorage.getItem(PIN_SALT_KEY);
+  if (!saltHex) return false;
+  const hash = await hashPin(pin, hexToBytes(saltHex));
+  return hash === localStorage.getItem(PIN_HASH_KEY);
+}
+
+function isBiometricSupported(){ return window.isSecureContext && !!window.PublicKeyCredential; }
+async function isPlatformAuthenticatorAvailable(){
+  if (!isBiometricSupported()) return false;
+  try { return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); }
+  catch (e) { return false; }
+}
+function hasBiometricConfigured(){ return !!localStorage.getItem(WEBAUTHN_CRED_KEY); }
+async function registerBiometric(){
+  const credential = await navigator.credentials.create({
+    publicKey: {
+      challenge: randomBytes(32),
+      rp: { name: 'Medic Life' },
+      user: { id: randomBytes(16), name: 'mediclife-local', displayName: 'Medic Life' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+      timeout: 60000
+    }
+  });
+  localStorage.setItem(WEBAUTHN_CRED_KEY, bytesToB64url(new Uint8Array(credential.rawId)));
+}
+async function unlockWithBiometric(){
+  const credIdB64 = localStorage.getItem(WEBAUTHN_CRED_KEY);
+  if (!credIdB64) return false;
+  try {
+    await navigator.credentials.get({
+      publicKey: {
+        challenge: randomBytes(32),
+        allowCredentials: [{ id: b64urlToBytes(credIdB64), type: 'public-key' }],
+        userVerification: 'required',
+        timeout: 60000
+      }
+    });
+    return true;
+  } catch (e) {
+    console.warn('Biometría cancelada o fallida', e);
+    return false;
+  }
+}
+
+function showLockSubview(name){
+  document.getElementById('lockSetup').style.display = name === 'setup' ? 'block' : 'none';
+  document.getElementById('lockUnlock').style.display = name === 'unlock' ? 'block' : 'none';
+  document.getElementById('biometricOffer').style.display = name === 'offer' ? 'block' : 'none';
+}
+async function bootLockScreen(){
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.getElementById('screen-lock').classList.add('active');
+  if (!hasPinConfigured()) {
+    showLockSubview('setup');
+    return;
+  }
+  showLockSubview('unlock');
+  document.getElementById('pinUnlockInput').value = '';
+  document.getElementById('pinUnlockError').textContent = '';
+  const showBiometricBtn = hasBiometricConfigured() && await isPlatformAuthenticatorAvailable();
+  document.getElementById('btnBiometricUnlock').style.display = showBiometricBtn ? 'block' : 'none';
+}
+async function unlockAppUI(){
+  document.getElementById('screen-lock').classList.remove('active');
+  history.replaceState({ view: 'welcome' }, '', '#welcome');
+  showScreen('welcome');
+}
+function lockNow(){
+  bootLockScreen();
+}
+
+document.getElementById('btnSavePin').addEventListener('click', async () => {
+  const pin = document.getElementById('pinSetupInput').value.trim();
+  const confirmPin = document.getElementById('pinSetupConfirm').value.trim();
+  const errorEl = document.getElementById('pinSetupError');
+  if (pin.length < 4) { errorEl.textContent = 'El PIN debe tener al menos 4 dígitos.'; return; }
+  if (pin !== confirmPin) { errorEl.textContent = 'Los dos PIN no coinciden.'; return; }
+  errorEl.textContent = '';
+  await savePin(pin);
+  if (await isPlatformAuthenticatorAvailable()) showLockSubview('offer');
+  else await unlockAppUI();
+});
+document.getElementById('btnEnableBiometric').addEventListener('click', async () => {
+  try { await registerBiometric(); }
+  catch (e) { alert('No se pudo activar la huella/rostro en este dispositivo. Puedes seguir usando el PIN.'); }
+  await unlockAppUI();
+});
+document.getElementById('btnSkipBiometric').addEventListener('click', async () => { await unlockAppUI(); });
+document.getElementById('btnUnlockPin').addEventListener('click', async () => {
+  const pin = document.getElementById('pinUnlockInput').value.trim();
+  const errorEl = document.getElementById('pinUnlockError');
+  if (await verifyPin(pin)) { errorEl.textContent = ''; await unlockAppUI(); }
+  else { errorEl.textContent = 'PIN incorrecto.'; document.getElementById('pinUnlockInput').value = ''; }
+});
+document.getElementById('btnBiometricUnlock').addEventListener('click', async () => {
+  const ok = await unlockWithBiometric();
+  if (ok) await unlockAppUI();
+  else document.getElementById('pinUnlockError').textContent = 'No se reconoció la huella/rostro. Prueba con el PIN.';
+});
+document.getElementById('btnLockNow').addEventListener('click', lockNow);
+document.getElementById('btnResetPin').addEventListener('click', () => {
+  if (confirm('¿Restablecer el PIN y la huella/rostro? Tendrás que configurarlos de nuevo (tus vacaciones y guardias no se borran).')) {
+    localStorage.removeItem(PIN_SALT_KEY);
+    localStorage.removeItem(PIN_HASH_KEY);
+    localStorage.removeItem(WEBAUTHN_CRED_KEY);
+    bootLockScreen();
+  }
+});
+
+/* Re-bloquea si el móvil estuvo con la app en segundo plano más de 30s */
+let lastHiddenAt = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    lastHiddenAt = Date.now();
+  } else if (document.visibilityState === 'visible') {
+    const wasHiddenLong = lastHiddenAt && (Date.now() - lastHiddenAt > 30000);
+    const isUnlocked = !document.getElementById('screen-lock').classList.contains('active');
+    if (wasHiddenLong && isUnlocked && hasPinConfigured()) lockNow();
+    lastHiddenAt = null;
+  }
+});
+
+/* ---------- arranque ---------- */
+bootLockScreen();
+</script>
+</body>
+</html>

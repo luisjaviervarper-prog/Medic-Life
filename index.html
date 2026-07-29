@@ -340,6 +340,16 @@
 
       <div class="section-title">Resumen por años</div>
       <div class="ficha-card" id="guardYearsTable"></div>
+
+      <div class="section-title">Copia de seguridad de guardias</div>
+      <p class="help-text" style="margin-bottom:10px;">
+        Exporta todas tus guardias a un archivo, envíaselas a alguien por WhatsApp,
+        o importa un archivo exportado antes (reemplaza los datos actuales de guardias).
+      </p>
+      <button class="btn-outline" id="btnExportGuards">⬇️ Exportar guardias (.json)</button>
+      <button class="btn-outline" id="btnShareGuardsWhatsApp">📲 Enviar por WhatsApp</button>
+      <button class="btn-outline" id="btnImportGuards">⬆️ Importar guardias (.json)</button>
+      <input type="file" id="guardImportInput" accept="application/json,.json" style="display:none">
     </div>
   </section>
 
@@ -905,6 +915,95 @@ document.getElementById('guardAnnotationsEditList').addEventListener('click', as
     await dbDelete('guardAnnotations', delBtn.dataset.id);
     await renderGuardAnnotations(currentGuardYear);
   }
+});
+
+/* ---------- Guardias: exportar / importar / WhatsApp ---------- */
+const GUARD_STORE_NAMES = ['primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'guardAnnotations'];
+async function collectGuardBackup(){
+  const backup = { app: 'medic-life', type: 'guardias-backup', exportedAt: new Date().toISOString() };
+  for (const store of GUARD_STORE_NAMES) backup[store] = await dbGetAll(store);
+  return backup;
+}
+function triggerDownload(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+async function buildGuardSummaryText(year){
+  const sets = await getGuardDaySets();
+  let lines = [`📋 Guardias ${year} — Medic Life`, ''];
+  let yearTotal = { primera: 0, segunda: 0, tercera: 0, pulmon: 0 };
+  for (let m = 0; m < 12; m++) {
+    const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const c = countGuardTypes(sets, prefix);
+    if (c.total === 0 && c.pulmon === 0) continue;
+    yearTotal.primera += c.primera; yearTotal.segunda += c.segunda; yearTotal.tercera += c.tercera; yearTotal.pulmon += c.pulmon;
+    lines.push(`${MONTH_NAMES[m]}: 1ª ${c.primera} · 2ª ${c.segunda} · 3ª ${c.tercera} · P ${c.pulmon} (Total ${c.total})`);
+  }
+  if (lines.length === 2) lines.push('Sin guardias marcadas este año.');
+  else lines.push('', `Total año: 1ª ${yearTotal.primera} · 2ª ${yearTotal.segunda} · 3ª ${yearTotal.tercera} · P ${yearTotal.pulmon} (Total ${yearTotal.primera + yearTotal.segunda + yearTotal.tercera})`);
+  return lines.join('\n');
+}
+async function exportGuardBackupFile(){
+  const backup = await collectGuardBackup();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  triggerDownload(blob, `medic-life-guardias-${currentGuardYear}.json`);
+}
+async function shareGuardsByWhatsApp(){
+  const summaryText = await buildGuardSummaryText(currentGuardYear);
+  const backup = await collectGuardBackup();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const filename = `medic-life-guardias-${currentGuardYear}.json`;
+  if (navigator.canShare && window.File) {
+    try {
+      const file = new File([blob], filename, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Guardias — Medic Life', text: summaryText });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Guardias — Medic Life', text: summaryText }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  triggerDownload(blob, filename);
+  const waText = summaryText + '\n\n(Te acabo de descargar también el archivo ' + filename + ' para poder importarlo en Medic Life.)';
+  window.open('https://wa.me/?text=' + encodeURIComponent(waText), '_blank');
+}
+async function importGuardBackupFile(file){
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    alert('No se pudo leer el archivo. Asegúrate de que es un backup de guardias exportado desde Medic Life.');
+    return;
+  }
+  const looksValid = data && GUARD_STORE_NAMES.some(s => Array.isArray(data[s]));
+  if (!looksValid) { alert('El archivo no tiene el formato esperado de un backup de guardias de Medic Life.'); return; }
+  if (!confirm('Esto reemplazará TODOS los datos de guardias actuales (primera, segunda, tercera, pulmón y anotaciones) por los del archivo importado. ¿Continuar?')) return;
+  for (const store of GUARD_STORE_NAMES) {
+    const existing = await dbGetAll(store);
+    for (const item of existing) await dbDelete(store, item.id);
+    for (const item of (data[store] || [])) await dbPut(store, item);
+  }
+  alert('Guardias importadas correctamente.');
+  await renderGuardScreen(currentGuardYear);
+}
+document.getElementById('btnExportGuards').addEventListener('click', exportGuardBackupFile);
+document.getElementById('btnShareGuardsWhatsApp').addEventListener('click', shareGuardsByWhatsApp);
+document.getElementById('btnImportGuards').addEventListener('click', () => document.getElementById('guardImportInput').click());
+document.getElementById('guardImportInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) await importGuardBackupFile(file);
 });
 
 /* ======================================================================

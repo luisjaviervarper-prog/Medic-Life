@@ -1,0 +1,14 @@
+{
+  "name": "Medic Life — Vacaciones y Guardias",
+  "short_name": "Medic Life",
+  "start_url": "./MedicLife.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A1416",
+  "theme_color": "#0A1416",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

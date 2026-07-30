@@ -166,6 +166,18 @@
     background:var(--bg-ash-light); color:var(--text-light); font-size:15px; margin-bottom:12px;
   }
   input[type=date]{color-scheme:dark;}
+  select{
+    width:100%; padding:14px; border-radius:8px; border:1px solid rgba(31,182,166,0.4);
+    background:var(--bg-ash-light); color:var(--text-light); font-size:15px; margin-bottom:12px;
+  }
+  .date-chip{
+    padding:10px 12px; border-radius:8px; background:var(--bg-ash-light);
+    border:1px solid rgba(31,182,166,0.3); color:var(--text-muted);
+    font-size:14px; margin-bottom:12px;
+  }
+  .date-chip.selected{
+    border-color:var(--accent-teal); color:var(--accent-teal); font-weight:700;
+  }
   label.field-label{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; display:block; margin-bottom:4px;}
   .toggle-row{display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:13px; margin-bottom:10px;}
   .months-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:10px;}
@@ -428,7 +440,7 @@
       <div class="tile">
         <label class="field-label">Fecha</label>
         <button class="btn-outline" id="btnPickLogDate" style="margin-bottom:6px;">📅 Elegir fecha</button>
-        <div class="card-muted" id="logSelectedDateLabel" style="margin-bottom:10px;">Sin fecha seleccionada</div>
+        <div class="date-chip" id="logSelectedDateLabel">Sin fecha seleccionada</div>
         <label class="field-label">Concepto</label>
         <select id="logConceptSelect"></select>
         <div id="logHoursRow" style="display:none;">
@@ -436,7 +448,11 @@
           <input type="number" id="logHoursInput" min="0" step="0.5" placeholder="Ej. 3">
           <p class="help-text">Se computan como el doble: <b id="logHoursPreview" style="color:var(--accent-teal);">0</b> horas generadas.</p>
         </div>
+        <label class="field-label" style="margin-top:4px;">Fotos (opcional)</label>
+        <input type="file" id="logPhotoInput" accept="image/*" multiple style="margin-bottom:8px;">
+        <div id="logPhotoPreview" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;"></div>
         <button class="btn-ember" id="btnAddLogEntry" style="margin-top:4px;">＋ Añadir registro</button>
+        <button class="btn-outline" id="btnCancelLogEdit" style="display:none; margin-top:8px; margin-bottom:0;">Cancelar edición</button>
       </div>
 
       <div id="guardLogMonths"></div>
@@ -1180,10 +1196,13 @@ const GUARD_LOG_CONCEPTS = {
   tardes: 'Tardes',
   transplant_uni: 'Trasplante de pulmón (unipulmonar)',
   transplant_bi: 'Trasplante de pulmón (bipulmonar)',
+  transplant_cardiaco_infantil: 'Trasplante cardíaco infantil',
   horas_materno: 'Horas extra materno',
   libranza_generada: 'Día generado de libranza'
 };
 let logSelectedDate = null;
+let logPhotos = [];
+let editingLogEntryId = null;
 function renderLogConceptOptions(){
   document.getElementById('logConceptSelect').innerHTML = Object.entries(GUARD_LOG_CONCEPTS)
     .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
@@ -1191,6 +1210,55 @@ function renderLogConceptOptions(){
 function updateLogHoursVisibility(){
   const concept = document.getElementById('logConceptSelect').value;
   document.getElementById('logHoursRow').style.display = concept === 'horas_materno' ? 'block' : 'none';
+}
+function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function renderLogPhotoPreview(){
+  document.getElementById('logPhotoPreview').innerHTML = logPhotos.map((src, idx) => `
+    <div style="position:relative;">
+      <img src="${src}" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid rgba(31,182,166,0.3); display:block;">
+      <button data-action="remove-log-photo" data-idx="${idx}" class="icon-btn" style="position:absolute; top:-8px; right:-8px; background:var(--bg-obsidian); border-radius:50%; color:var(--state-error); font-size:11px; padding:2px 5px; line-height:1;">✕</button>
+    </div>
+  `).join('');
+}
+function resetLogForm(){
+  logSelectedDate = null;
+  editingLogEntryId = null;
+  logPhotos = [];
+  const label = document.getElementById('logSelectedDateLabel');
+  label.textContent = 'Sin fecha seleccionada';
+  label.classList.remove('selected');
+  document.getElementById('logConceptSelect').value = 'presencia';
+  updateLogHoursVisibility();
+  document.getElementById('logHoursInput').value = '';
+  document.getElementById('logHoursPreview').textContent = '0';
+  renderLogPhotoPreview();
+  document.getElementById('btnAddLogEntry').textContent = '＋ Añadir registro';
+  document.getElementById('btnCancelLogEdit').style.display = 'none';
+}
+async function startEditLogEntry(id){
+  const entry = await dbGet('guardLogEntries', id);
+  if (!entry) return;
+  editingLogEntryId = id;
+  logSelectedDate = entry.dateStr;
+  logPhotos = (entry.photos || []).slice();
+  const label = document.getElementById('logSelectedDateLabel');
+  label.textContent = formatDateRange(entry.dateStr);
+  label.classList.add('selected');
+  document.getElementById('logConceptSelect').value = entry.concept;
+  updateLogHoursVisibility();
+  document.getElementById('logHoursInput').value = entry.concept === 'horas_materno' ? entry.hours : '';
+  document.getElementById('logHoursPreview').textContent = entry.concept === 'horas_materno' ? String((entry.hours || 0) * 2) : '0';
+  renderLogPhotoPreview();
+  document.getElementById('btnAddLogEntry').textContent = '💾 Guardar cambios';
+  document.getElementById('btnCancelLogEdit').style.display = 'block';
+  document.querySelector('#screen-guard-log .content').scrollTop = 0;
 }
 async function renderGuardLogScreen(year){
   currentGuardYear = year;
@@ -1204,6 +1272,7 @@ async function renderGuardLogScreen(year){
     if (monthEntries.length === 0) continue;
     const uni = monthEntries.filter(en => en.concept === 'transplant_uni').length;
     const bi = monthEntries.filter(en => en.concept === 'transplant_bi').length;
+    const cardiacoInfantil = monthEntries.filter(en => en.concept === 'transplant_cardiaco_infantil').length;
     const presencia = monthEntries.filter(en => en.concept === 'presencia').length;
     const tardes = monthEntries.filter(en => en.concept === 'tardes').length;
     const libranza = monthEntries.filter(en => en.concept === 'libranza_generada').length;
@@ -1215,7 +1284,8 @@ async function renderGuardLogScreen(year){
           <div class="field-row-view">
             <span class="field-row-label">${formatDateRange(en.dateStr)}</span>
             <span class="field-row-value">
-              ${escapeHtml(GUARD_LOG_CONCEPTS[en.concept] || en.concept)}${en.concept === 'horas_materno' ? ` (${en.hours}h → ${en.hours * 2}h)` : ''}
+              ${escapeHtml(GUARD_LOG_CONCEPTS[en.concept] || en.concept)}${en.concept === 'horas_materno' ? ` (${en.hours}h → ${en.hours * 2}h)` : ''}${en.photos && en.photos.length ? ` · 📷 ${en.photos.length}` : ''}
+              <button class="icon-btn" data-action="edit-log-entry" data-id="${en.id}" style="padding:2px 4px;">✏️</button>
               <button class="icon-btn" data-action="delete-log-entry" data-id="${en.id}" style="color:var(--state-error); padding:2px 4px;">✕</button>
             </span>
           </div>
@@ -1224,6 +1294,7 @@ async function renderGuardLogScreen(year){
       <div class="tile" style="margin-bottom:16px;">
         <div class="field-row-view"><span class="field-row-label">Unipulmonar</span><span class="field-row-value">${uni}</span></div>
         <div class="field-row-view"><span class="field-row-label">Bipulmonar</span><span class="field-row-value">${bi}</span></div>
+        <div class="field-row-view"><span class="field-row-label">Cardíaco infantil</span><span class="field-row-value">${cardiacoInfantil}</span></div>
         <div class="field-row-view"><span class="field-row-label">Guardias de presencia</span><span class="field-row-value">${presencia}</span></div>
         <div class="field-row-view"><span class="field-row-label">Tardes</span><span class="field-row-value">${tardes}</span></div>
         <div class="field-row-view"><span class="field-row-label">Días de libranza generados</span><span class="field-row-value">${libranza}</span></div>
@@ -1238,7 +1309,9 @@ document.getElementById('btnGuardLogNextYear').addEventListener('click', () => r
 document.getElementById('btnPickLogDate').addEventListener('click', () => {
   openDatePicker((dateStr) => {
     logSelectedDate = dateStr;
-    document.getElementById('logSelectedDateLabel').textContent = formatDateRange(dateStr);
+    const label = document.getElementById('logSelectedDateLabel');
+    label.textContent = formatDateRange(dateStr);
+    label.classList.add('selected');
   }, currentGuardYear, new Date().getMonth());
 });
 document.getElementById('logConceptSelect').addEventListener('change', updateLogHoursVisibility);
@@ -1246,6 +1319,20 @@ document.getElementById('logHoursInput').addEventListener('input', () => {
   const hours = parseFloat(document.getElementById('logHoursInput').value) || 0;
   document.getElementById('logHoursPreview').textContent = String(hours * 2);
 });
+document.getElementById('logPhotoInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  for (const file of files) {
+    try { logPhotos.push(await fileToDataUrl(file)); }
+    catch (err) { console.warn('No se pudo leer la foto', err); }
+  }
+  e.target.value = '';
+  renderLogPhotoPreview();
+});
+document.getElementById('logPhotoPreview').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="remove-log-photo"]');
+  if (btn) { logPhotos.splice(parseInt(btn.dataset.idx), 1); renderLogPhotoPreview(); }
+});
+document.getElementById('btnCancelLogEdit').addEventListener('click', resetLogForm);
 document.getElementById('btnAddLogEntry').addEventListener('click', async () => {
   if (!logSelectedDate) { alert('Elige primero una fecha con el calendario.'); return; }
   const concept = document.getElementById('logConceptSelect').value;
@@ -1254,19 +1341,34 @@ document.getElementById('btnAddLogEntry').addEventListener('click', async () => 
     hours = parseFloat(document.getElementById('logHoursInput').value);
     if (!hours || hours <= 0) { alert('Indica las horas realizadas.'); return; }
   }
-  await dbPut('guardLogEntries', { id: uuid(), dateStr: logSelectedDate, concept, hours, createdAt: Date.now() });
-  logSelectedDate = null;
-  document.getElementById('logSelectedDateLabel').textContent = 'Sin fecha seleccionada';
-  document.getElementById('logHoursInput').value = '';
-  document.getElementById('logHoursPreview').textContent = '0';
+  const entry = {
+    id: editingLogEntryId || uuid(),
+    dateStr: logSelectedDate,
+    concept,
+    hours,
+    photos: logPhotos.slice(),
+    createdAt: Date.now()
+  };
+  if (editingLogEntryId) {
+    const existing = await dbGet('guardLogEntries', editingLogEntryId);
+    if (existing && existing.createdAt) entry.createdAt = existing.createdAt;
+  }
+  await dbPut('guardLogEntries', entry);
+  resetLogForm();
   await renderGuardLogScreen(currentGuardYear);
 });
 document.getElementById('guardLogMonths').addEventListener('click', async (e) => {
   const delBtn = e.target.closest('[data-action="delete-log-entry"]');
-  if (delBtn && confirm('¿Eliminar este registro?')) {
-    await dbDelete('guardLogEntries', delBtn.dataset.id);
-    await renderGuardLogScreen(currentGuardYear);
+  if (delBtn) {
+    if (confirm('¿Eliminar este registro?')) {
+      await dbDelete('guardLogEntries', delBtn.dataset.id);
+      if (editingLogEntryId === delBtn.dataset.id) resetLogForm();
+      await renderGuardLogScreen(currentGuardYear);
+    }
+    return;
   }
+  const editBtn = e.target.closest('[data-action="edit-log-entry"]');
+  if (editBtn) await startEditLogEntry(editBtn.dataset.id);
 });
 renderLogConceptOptions();
 updateLogHoursVisibility();

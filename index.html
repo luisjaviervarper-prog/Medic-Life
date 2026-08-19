@@ -29,6 +29,7 @@
     --guard-pulmon:#B26BF5;
     --guard-pulmon-outline:#F2C14E;
     --guard-reduccion:#D4AF37;
+    --guard-otros:#E0529E;
     --vac-vacation:#2E6FE0;
     --vac-festivo:#B3121C;
     --vac-permiso:#D6478F;
@@ -159,6 +160,12 @@
     font-size:9px; line-height:1; display:flex; align-items:center; justify-content:center;
     border-radius:0 0 0 4px;
   }
+  .cal-otros-mark{
+    position:absolute; right:0; bottom:0; width:50%; height:50%;
+    background:var(--guard-otros); color:#fff; font-weight:800;
+    font-size:9px; line-height:1; display:flex; align-items:center; justify-content:center;
+    border-radius:0 0 4px 0;
+  }
   .modal-overlay{
     position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
     display:flex; align-items:center; justify-content:center; padding:20px;
@@ -285,6 +292,16 @@
         <button class="btn-outline" id="btnLockNow">🔒 Bloquear ahora</button>
         <button class="btn-outline" id="btnResetPin">🔑 Cambiar PIN / huella</button>
       </div>
+      <div class="section-title" style="margin-top:18px;">Copia de seguridad completa</div>
+      <p class="help-text" style="margin-bottom:10px;">
+        Exporta todos tus datos (vacaciones, guardias y libranzas) a un archivo que puedes enviar por WhatsApp,
+        o importa una copia de seguridad enviada por otra persona (sustituirá los datos actuales).
+      </p>
+      <div style="width:100%; max-width:340px;">
+        <button class="btn-outline" id="btnExportFullBackup">⬇️ Exportar copia de seguridad</button>
+        <button class="btn-outline" id="btnImportFullBackup">⬆️ Importar copia de seguridad</button>
+        <input type="file" id="fullBackupImportInput" accept="application/json,.json" style="display:none">
+      </div>
       <p class="help-text">
         Tus datos se guardan de forma privada en este navegador, en este móvil.
       </p>
@@ -369,6 +386,7 @@
         <span><i style="background:var(--guard-congenitas);"></i>Congénitas</span>
         <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
         <span><i style="background:var(--bg-ash-light); position:relative; overflow:hidden;"><b style="position:absolute; left:0; bottom:0; width:50%; height:50%; background:var(--guard-reduccion); color:#fff; font-size:7px; display:flex; align-items:center; justify-content:center;">L</b></i>Días reducción</span>
+        <span><i style="background:var(--bg-ash-light); position:relative; overflow:hidden;"><b style="position:absolute; right:0; bottom:0; width:50%; height:50%; background:var(--guard-otros); color:#fff; font-size:7px; display:flex; align-items:center; justify-content:center;">O</b></i>Otros</span>
       </div>
 
       <div class="section-title">Meses (toca uno para ver y marcar guardias)</div>
@@ -423,6 +441,7 @@
         <span><i style="background:var(--guard-congenitas);"></i>Congénitas</span>
         <span><i style="background:var(--bg-ash-light); border:1px solid var(--guard-pulmon);"></i><b style="color:var(--guard-pulmon);">P</b> = Pulmón</span>
         <span><i style="background:var(--bg-ash-light); position:relative; overflow:hidden;"><b style="position:absolute; left:0; bottom:0; width:50%; height:50%; background:var(--guard-reduccion); color:#fff; font-size:7px; display:flex; align-items:center; justify-content:center;">L</b></i>Días reducción</span>
+        <span><i style="background:var(--bg-ash-light); position:relative; overflow:hidden;"><b style="position:absolute; right:0; bottom:0; width:50%; height:50%; background:var(--guard-otros); color:#fff; font-size:7px; display:flex; align-items:center; justify-content:center;">O</b></i>Otros</span>
       </div>
 
       <div id="guardMonthCalendar"></div>
@@ -434,7 +453,11 @@
         <button class="btn-outline" id="btnToggleCongenitasEdit" style="margin-bottom:0;">✏️ Modificar congénitas</button>
         <button class="btn-outline" id="btnTogglePulmonEdit" style="margin-bottom:0;">✏️ Modificar pulmón</button>
         <button class="btn-outline" id="btnToggleReduccionEdit" style="margin-bottom:0;">✏️ Modificar reducción</button>
+        <button class="btn-outline" id="btnToggleOtrosEdit" style="margin-bottom:0;">✏️ Modificar otros</button>
       </div>
+
+      <div class="section-title">Otros</div>
+      <div class="ficha-card" id="guardOtrosList"></div>
     </div>
   </section>
 
@@ -520,12 +543,12 @@
 /* ---------- IndexedDB helpers ---------- */
 function openDb(){
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('medic_life_db', 4);
+    const req = indexedDB.open('medic_life_db', 5);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
       const stores = [
         'vacationYears', 'vacationDays', 'holidayDays', 'permisoDays', 'lactanciaDays', 'vacationAnnotations',
-        'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'congenitasDays', 'reduccionDays', 'guardAnnotations',
+        'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'congenitasDays', 'reduccionDays', 'otrosDays', 'guardAnnotations',
         'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'
       ];
       stores.forEach(name => {
@@ -905,7 +928,7 @@ document.getElementById('vacationAnnotationsEditList').addEventListener('click',
    ====================================================================== */
 let currentGuardYear = new Date().getFullYear();
 let currentGuardMonth = new Date().getMonth();
-let primeraEditMode = false, segundaEditMode = false, terceraEditMode = false, congenitasEditMode = false, pulmonEditMode = false, reduccionEditMode = false;
+let primeraEditMode = false, segundaEditMode = false, terceraEditMode = false, congenitasEditMode = false, pulmonEditMode = false, reduccionEditMode = false, otrosEditMode = false;
 let guardAnnotationsEditMode = false;
 
 function guardCellInfo(dateStr, sets){
@@ -915,6 +938,7 @@ function guardCellInfo(dateStr, sets){
   const isCongenitas = !isPrimera && !isSegunda && !isTercera && sets.congenitas.has(dateStr);
   const isPulmon = sets.pulmon.has(dateStr);
   const isReduccion = sets.reduccion.has(dateStr);
+  const isOtros = sets.otros.has(dateStr);
   let colorClass = '';
   if (isPrimera) colorClass = 'cal-primera';
   else if (isSegunda) colorClass = 'cal-segunda';
@@ -922,20 +946,21 @@ function guardCellInfo(dateStr, sets){
   else if (isCongenitas) colorClass = 'cal-congenitas';
   let extraHtml = isPulmon ? '<span class="cal-pulmon-mark">P</span>' : '';
   if (isReduccion) extraHtml += '<span class="cal-reduccion-mark">L</span>';
+  if (isOtros) extraHtml += '<span class="cal-otros-mark">O</span>';
   const ringClass = isPulmon ? 'cal-pulmon-ring' : '';
   return { colorClass, extraHtml, ringClass };
 }
 async function getGuardDaySets(){
-  const [allPrimera, allSegunda, allTercera, allCongenitas, allPulmon, allReduccion] = await Promise.all([
-    dbGetAll('primeraDays'), dbGetAll('segundaDays'), dbGetAll('terceraDays'), dbGetAll('congenitasDays'), dbGetAll('pulmonDays'), dbGetAll('reduccionDays')
+  const [allPrimera, allSegunda, allTercera, allCongenitas, allPulmon, allReduccion, allOtros] = await Promise.all([
+    dbGetAll('primeraDays'), dbGetAll('segundaDays'), dbGetAll('terceraDays'), dbGetAll('congenitasDays'), dbGetAll('pulmonDays'), dbGetAll('reduccionDays'), dbGetAll('otrosDays')
   ]);
-  return { allPrimera, allSegunda, allTercera, allCongenitas, allPulmon, allReduccion };
+  return { allPrimera, allSegunda, allTercera, allCongenitas, allPulmon, allReduccion, allOtros };
 }
 function countGuardTypes(sets, prefix){
   const countIn = (arr) => arr.filter(d => d.dateStr.startsWith(prefix)).length;
   const primera = countIn(sets.allPrimera), segunda = countIn(sets.allSegunda), tercera = countIn(sets.allTercera),
-        congenitas = countIn(sets.allCongenitas), pulmon = countIn(sets.allPulmon), reduccion = countIn(sets.allReduccion);
-  return { primera, segunda, tercera, congenitas, pulmon, reduccion, total: primera + segunda + tercera + congenitas };
+        congenitas = countIn(sets.allCongenitas), pulmon = countIn(sets.allPulmon), reduccion = countIn(sets.allReduccion), otros = countIn(sets.allOtros);
+  return { primera, segunda, tercera, congenitas, pulmon, reduccion, otros, total: primera + segunda + tercera + congenitas };
 }
 function guardSummaryCardHtml(counts, totalLabel){
   return `
@@ -963,6 +988,10 @@ function guardSummaryCardHtml(counts, totalLabel){
       <span class="field-row-label">Días reducción</span>
       <span class="field-row-value" style="color:var(--guard-reduccion); font-weight:700;">${counts.reduccion}</span>
     </div>
+    <div class="field-row-view">
+      <span class="field-row-label">Otros</span>
+      <span class="field-row-value" style="color:var(--guard-otros); font-weight:700;">${counts.otros}</span>
+    </div>
     <div class="field-row-view" style="border-bottom:none;">
       <span class="field-row-label">${totalLabel}</span>
       <span class="field-row-value" style="color:var(--accent-teal); font-weight:700;">${counts.total}</span>
@@ -983,7 +1012,7 @@ async function renderGuardMonthsGrid(year){
     html += `
       <div class="month-tile" data-month="${m}">
         <div class="month-tile-name">${MONTH_NAMES[m]}</div>
-        <div class="month-tile-row"><span>1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon} · L ${counts.reduccion}</span></div>
+        <div class="month-tile-row"><span>1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon} · L ${counts.reduccion} · O ${counts.otros}</span></div>
         <div class="month-tile-row"><span>Total</span><span class="month-tile-total">${counts.total}</span></div>
       </div>
     `;
@@ -992,14 +1021,14 @@ async function renderGuardMonthsGrid(year){
 }
 async function renderGuardYearsTable(){
   const sets = await getGuardDaySets();
-  const allYearsSet = new Set([...sets.allPrimera, ...sets.allSegunda, ...sets.allTercera, ...sets.allCongenitas, ...sets.allPulmon, ...sets.allReduccion].map(d => parseInt(d.dateStr.slice(0, 4))));
+  const allYearsSet = new Set([...sets.allPrimera, ...sets.allSegunda, ...sets.allTercera, ...sets.allCongenitas, ...sets.allPulmon, ...sets.allReduccion, ...sets.allOtros].map(d => parseInt(d.dateStr.slice(0, 4))));
   const years = [...allYearsSet].sort((a, b) => a - b);
   document.getElementById('guardYearsTable').innerHTML = years.map(y => {
     const counts = countGuardTypes(sets, String(y));
     return `
       <div class="field-row-view" data-year="${y}" style="cursor:pointer;">
         <span class="field-row-label">${y}</span>
-        <span class="field-row-value">1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon} · L ${counts.reduccion} · Total ${counts.total}</span>
+        <span class="field-row-value">1ª ${counts.primera} · 2ª ${counts.segunda} · 3ª ${counts.tercera} · C ${counts.congenitas} · P ${counts.pulmon} · L ${counts.reduccion} · O ${counts.otros} · Total ${counts.total}</span>
       </div>
     `;
   }).join('') || '<p class="help-text" style="padding:10px 0;">Sin guardias marcadas todavía.</p>';
@@ -1039,8 +1068,8 @@ async function renderGuardMonthCalendar(year, month){
   const sets = await getGuardDaySets();
   const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
   const toSet = (arr) => new Set(arr.filter(d => d.dateStr.startsWith(prefix)).map(d => d.dateStr));
-  const cellSets = { primera: toSet(sets.allPrimera), segunda: toSet(sets.allSegunda), tercera: toSet(sets.allTercera), congenitas: toSet(sets.allCongenitas), pulmon: toSet(sets.allPulmon), reduccion: toSet(sets.allReduccion) };
-  const editMode = primeraEditMode || segundaEditMode || terceraEditMode || congenitasEditMode || pulmonEditMode || reduccionEditMode;
+  const cellSets = { primera: toSet(sets.allPrimera), segunda: toSet(sets.allSegunda), tercera: toSet(sets.allTercera), congenitas: toSet(sets.allCongenitas), pulmon: toSet(sets.allPulmon), reduccion: toSet(sets.allReduccion), otros: toSet(sets.allOtros) };
+  const editMode = primeraEditMode || segundaEditMode || terceraEditMode || congenitasEditMode || pulmonEditMode || reduccionEditMode || otrosEditMode;
   document.getElementById('guardMonthCalendar').innerHTML = renderMonthGrid(year, month, editMode, (dateStr) => guardCellInfo(dateStr, cellSets));
 }
 async function renderGuardMonthScreen(year, month){
@@ -1058,6 +1087,8 @@ async function renderGuardMonthScreen(year, month){
   document.getElementById('btnToggleCongenitasEdit').textContent = congenitasEditMode ? '✅ Cerrar edición' : '✏️ Modificar congénitas';
   document.getElementById('btnTogglePulmonEdit').textContent = pulmonEditMode ? '✅ Cerrar edición' : '✏️ Modificar pulmón';
   document.getElementById('btnToggleReduccionEdit').textContent = reduccionEditMode ? '✅ Cerrar edición' : '✏️ Modificar reducción';
+  document.getElementById('btnToggleOtrosEdit').textContent = otrosEditMode ? '✅ Cerrar edición' : '✏️ Modificar otros';
+  await renderGuardOtrosList(year, month);
 }
 function setSoleGuardEditMode(mode){
   primeraEditMode = mode === 'primera';
@@ -1066,6 +1097,33 @@ function setSoleGuardEditMode(mode){
   congenitasEditMode = mode === 'congenitas';
   pulmonEditMode = mode === 'pulmon';
   reduccionEditMode = mode === 'reduccion';
+  otrosEditMode = mode === 'otros';
+}
+async function toggleOtrosDay(dateStr){
+  const all = await dbGetAll('otrosDays');
+  const existing = all.find(d => d.dateStr === dateStr);
+  if (existing) {
+    if (confirm('Ya hay una anotación en "Otros" para este día. ¿Eliminarla?')) await dbDelete('otrosDays', existing.id);
+    return;
+  }
+  const concepto = window.prompt('¿Qué pasa ese día?');
+  if (concepto === null) return;
+  const trimmed = concepto.trim();
+  if (!trimmed) return;
+  await dbPut('otrosDays', { id: uuid(), dateStr, concepto: trimmed });
+}
+async function renderGuardOtrosList(year, month){
+  const all = await dbGetAll('otrosDays');
+  const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const items = all.filter(d => d.dateStr.startsWith(prefix)).sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+  document.getElementById('guardOtrosList').innerHTML = items.length === 0
+    ? '<p class="help-text" style="padding:6px 0;">Sin días marcados como "Otros" este mes.</p>'
+    : items.map(d => `
+        <div class="field-row-view">
+          <span class="field-row-label">${formatDateRange(d.dateStr, d.dateStr)}</span>
+          <span class="field-row-value">${escapeHtml(d.concepto)}</span>
+        </div>
+      `).join('');
 }
 
 /* eventos: Guardias */
@@ -1082,6 +1140,7 @@ document.getElementById('btnToggleTerceraEdit').addEventListener('click', () => 
 document.getElementById('btnToggleCongenitasEdit').addEventListener('click', () => { setSoleGuardEditMode(congenitasEditMode ? null : 'congenitas'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('btnTogglePulmonEdit').addEventListener('click', () => { setSoleGuardEditMode(pulmonEditMode ? null : 'pulmon'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('btnToggleReduccionEdit').addEventListener('click', () => { setSoleGuardEditMode(reduccionEditMode ? null : 'reduccion'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
+document.getElementById('btnToggleOtrosEdit').addEventListener('click', () => { setSoleGuardEditMode(otrosEditMode ? null : 'otros'); renderGuardMonthScreen(currentGuardYear, currentGuardMonth); });
 document.getElementById('guardMonthCalendar').addEventListener('click', async (e) => {
   const cell = e.target.closest('.cal-editable');
   if (!cell) return;
@@ -1091,6 +1150,7 @@ document.getElementById('guardMonthCalendar').addEventListener('click', async (e
   else if (congenitasEditMode) await toggleDayInStore('congenitasDays', cell.dataset.date);
   else if (pulmonEditMode) await toggleDayInStore('pulmonDays', cell.dataset.date);
   else if (reduccionEditMode) await toggleDayInStore('reduccionDays', cell.dataset.date);
+  else if (otrosEditMode) await toggleOtrosDay(cell.dataset.date);
   else return;
   await renderGuardMonthScreen(currentGuardYear, currentGuardMonth);
 });
@@ -1122,7 +1182,7 @@ document.getElementById('guardAnnotationsEditList').addEventListener('click', as
 });
 
 /* ---------- Guardias: exportar / importar / WhatsApp ---------- */
-const GUARD_STORE_NAMES = ['primeraDays', 'segundaDays', 'terceraDays', 'congenitasDays', 'pulmonDays', 'reduccionDays', 'guardAnnotations', 'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'];
+const GUARD_STORE_NAMES = ['primeraDays', 'segundaDays', 'terceraDays', 'congenitasDays', 'pulmonDays', 'reduccionDays', 'otrosDays', 'guardAnnotations', 'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'];
 async function collectGuardBackup(){
   const backup = { app: 'medic-life', type: 'guardias-backup', exportedAt: new Date().toISOString() };
   for (const store of GUARD_STORE_NAMES) backup[store] = await dbGetAll(store);
@@ -1141,16 +1201,16 @@ function triggerDownload(blob, filename){
 async function buildGuardSummaryText(year){
   const sets = await getGuardDaySets();
   let lines = [`📋 Guardias ${year} — Medic Life`, ''];
-  let yearTotal = { primera: 0, segunda: 0, tercera: 0, congenitas: 0, pulmon: 0, reduccion: 0 };
+  let yearTotal = { primera: 0, segunda: 0, tercera: 0, congenitas: 0, pulmon: 0, reduccion: 0, otros: 0 };
   for (let m = 0; m < 12; m++) {
     const prefix = `${year}-${String(m + 1).padStart(2, '0')}`;
     const c = countGuardTypes(sets, prefix);
-    if (c.total === 0 && c.pulmon === 0 && c.reduccion === 0) continue;
-    yearTotal.primera += c.primera; yearTotal.segunda += c.segunda; yearTotal.tercera += c.tercera; yearTotal.congenitas += c.congenitas; yearTotal.pulmon += c.pulmon; yearTotal.reduccion += c.reduccion;
-    lines.push(`${MONTH_NAMES[m]}: 1ª ${c.primera} · 2ª ${c.segunda} · 3ª ${c.tercera} · C ${c.congenitas} · P ${c.pulmon} · L ${c.reduccion} (Total ${c.total})`);
+    if (c.total === 0 && c.pulmon === 0 && c.reduccion === 0 && c.otros === 0) continue;
+    yearTotal.primera += c.primera; yearTotal.segunda += c.segunda; yearTotal.tercera += c.tercera; yearTotal.congenitas += c.congenitas; yearTotal.pulmon += c.pulmon; yearTotal.reduccion += c.reduccion; yearTotal.otros += c.otros;
+    lines.push(`${MONTH_NAMES[m]}: 1ª ${c.primera} · 2ª ${c.segunda} · 3ª ${c.tercera} · C ${c.congenitas} · P ${c.pulmon} · L ${c.reduccion} · O ${c.otros} (Total ${c.total})`);
   }
   if (lines.length === 2) lines.push('Sin guardias marcadas este año.');
-  else lines.push('', `Total año: 1ª ${yearTotal.primera} · 2ª ${yearTotal.segunda} · 3ª ${yearTotal.tercera} · C ${yearTotal.congenitas} · P ${yearTotal.pulmon} · L ${yearTotal.reduccion} (Total ${yearTotal.primera + yearTotal.segunda + yearTotal.tercera + yearTotal.congenitas})`);
+  else lines.push('', `Total año: 1ª ${yearTotal.primera} · 2ª ${yearTotal.segunda} · 3ª ${yearTotal.tercera} · C ${yearTotal.congenitas} · P ${yearTotal.pulmon} · L ${yearTotal.reduccion} · O ${yearTotal.otros} (Total ${yearTotal.primera + yearTotal.segunda + yearTotal.tercera + yearTotal.congenitas})`);
   return lines.join('\n');
 }
 async function exportGuardBackupFile(){
@@ -1192,7 +1252,7 @@ async function importGuardBackupFile(file){
   }
   const looksValid = data && GUARD_STORE_NAMES.some(s => Array.isArray(data[s]));
   if (!looksValid) { alert('El archivo no tiene el formato esperado de un backup de guardias de Medic Life.'); return; }
-  if (!confirm('Esto reemplazará TODOS los datos de guardias actuales (primera, segunda, tercera, congénitas, pulmón, días de reducción, anotaciones, registro de trasplantes/horas y libranzas) por los del archivo importado. ¿Continuar?')) return;
+  if (!confirm('Esto reemplazará TODOS los datos de guardias actuales (primera, segunda, tercera, congénitas, pulmón, días de reducción, otros, anotaciones, registro de trasplantes/horas y libranzas) por los del archivo importado. ¿Continuar?')) return;
   for (const store of GUARD_STORE_NAMES) {
     const existing = await dbGetAll(store);
     for (const item of existing) await dbDelete(store, item.id);
@@ -1683,6 +1743,69 @@ document.addEventListener('visibilitychange', () => {
     if (wasHiddenLong && isUnlocked && hasPinConfigured()) lockNow();
     lastHiddenAt = null;
   }
+});
+
+/* ---------- Copia de seguridad completa (vacaciones + guardias + libranzas) ---------- */
+const ALL_STORE_NAMES = [
+  'vacationYears', 'vacationDays', 'holidayDays', 'permisoDays', 'lactanciaDays', 'vacationAnnotations',
+  'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'congenitasDays', 'reduccionDays', 'otrosDays', 'guardAnnotations',
+  'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'
+];
+async function collectFullBackup(){
+  const backup = { app: 'medic-life', type: 'full-backup', exportedAt: new Date().toISOString() };
+  for (const store of ALL_STORE_NAMES) backup[store] = await dbGetAll(store);
+  return backup;
+}
+async function exportFullBackupFile(){
+  const backup = await collectFullBackup();
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const filename = `medic-life-copia-seguridad-${new Date().toISOString().slice(0, 10)}.json`;
+  const shareText = '📋 Copia de seguridad de Medic Life (vacaciones, guardias y libranzas).';
+  if (navigator.canShare && window.File) {
+    try {
+      const file = new File([blob], filename, { type: 'application/json' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Copia de seguridad — Medic Life', text: shareText });
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;
+    }
+  }
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Copia de seguridad — Medic Life', text: shareText }); }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  triggerDownload(blob, filename);
+  const waText = shareText + '\n\n(Te acabo de descargar también el archivo ' + filename + '; adjúntalo en este chat para enviarlo por WhatsApp.)';
+  window.open('https://wa.me/?text=' + encodeURIComponent(waText), '_blank');
+}
+async function importFullBackupFile(file){
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    alert('No se pudo leer el archivo. Asegúrate de que es una copia de seguridad exportada desde Medic Life.');
+    return;
+  }
+  const looksValid = data && ALL_STORE_NAMES.some(s => Array.isArray(data[s]));
+  if (!looksValid) { alert('El archivo no tiene el formato esperado de una copia de seguridad de Medic Life.'); return; }
+  if (!confirm('¿Está seguro de que quiere sustituir los datos?')) return;
+  for (const store of ALL_STORE_NAMES) {
+    const existing = await dbGetAll(store);
+    for (const item of existing) await dbDelete(store, item.id);
+    for (const item of (data[store] || [])) await dbPut(store, item);
+  }
+  alert('Copia de seguridad importada correctamente.');
+  await renderVacationScreen(currentVacationYear);
+  await renderGuardScreen(currentGuardYear);
+}
+document.getElementById('btnExportFullBackup').addEventListener('click', exportFullBackupFile);
+document.getElementById('btnImportFullBackup').addEventListener('click', () => document.getElementById('fullBackupImportInput').click());
+document.getElementById('fullBackupImportInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) await importFullBackupFile(file);
 });
 
 /* ---------- arranque ---------- */

@@ -198,6 +198,12 @@
   }
   label.field-label{font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; display:block; margin-bottom:4px;}
   .toggle-row{display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:13px; margin-bottom:10px;}
+  .month-photo-preview{display:block; width:100%; max-height:420px; object-fit:contain; border-radius:6px; margin:8px 0; background:var(--bg-obsidian); cursor:zoom-in;}
+  .month-photo-actions{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:6px 0 8px;}
+  .month-photo-actions .btn-outline{margin-bottom:0;}
+  .month-photo-viewer{display:none; position:fixed; inset:0; z-index:50; background:rgba(0,0,0,0.92); align-items:center; justify-content:center; padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom); cursor:zoom-out;}
+  .month-photo-viewer.open{display:flex;}
+  .month-photo-viewer img{max-width:100%; max-height:100%; object-fit:contain;}
   .months-grid{display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; margin-bottom:10px;}
   .month-tile{
     background:var(--bg-ash); border:1px solid rgba(31,182,166,0.3);
@@ -458,8 +464,14 @@
 
       <div class="section-title">Otros</div>
       <div class="ficha-card" id="guardOtrosList"></div>
+
+      <div class="section-title">Foto del mes</div>
+      <div class="ficha-card" id="guardMonthPhoto"></div>
+      <input type="file" id="guardMonthPhotoInput" accept="image/*" style="display:none">
     </div>
   </section>
+
+  <div class="month-photo-viewer" id="monthPhotoViewer"><img id="monthPhotoViewerImg" alt="Foto del mes"></div>
 
   <!-- ===================== GUARDIAS: REGISTRO (día por línea) ===================== -->
   <section id="screen-guard-log" class="screen">
@@ -543,13 +555,13 @@
 /* ---------- IndexedDB helpers ---------- */
 function openDb(){
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('medic_life_db', 5);
+    const req = indexedDB.open('medic_life_db', 6);
     req.onupgradeneeded = (e) => {
       const db = e.target.result;
       const stores = [
         'vacationYears', 'vacationDays', 'holidayDays', 'permisoDays', 'lactanciaDays', 'vacationAnnotations',
         'primeraDays', 'segundaDays', 'terceraDays', 'pulmonDays', 'congenitasDays', 'reduccionDays', 'otrosDays', 'guardAnnotations',
-        'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends'
+        'guardLogEntries', 'libranzaHourSpends', 'libranzaDaySpends', 'monthPhotos'
       ];
       stores.forEach(name => {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
@@ -1089,6 +1101,7 @@ async function renderGuardMonthScreen(year, month){
   document.getElementById('btnToggleReduccionEdit').textContent = reduccionEditMode ? '✅ Cerrar edición' : '✏️ Modificar reducción';
   document.getElementById('btnToggleOtrosEdit').textContent = otrosEditMode ? '✅ Cerrar edición' : '✏️ Modificar otros';
   await renderGuardOtrosList(year, month);
+  await renderGuardMonthPhoto(year, month);
 }
 function setSoleGuardEditMode(mode){
   primeraEditMode = mode === 'primera';
@@ -1125,6 +1138,73 @@ async function renderGuardOtrosList(year, month){
         </div>
       `).join('');
 }
+
+/* ---------- Guardias: foto del mes ---------- */
+function monthPhotoKey(year, month){ return `${year}-${String(month + 1).padStart(2, '0')}`; }
+async function renderGuardMonthPhoto(year, month){
+  const record = await dbGet('monthPhotos', monthPhotoKey(year, month));
+  const box = document.getElementById('guardMonthPhoto');
+  if (!record) {
+    box.innerHTML = `
+      <p class="help-text" style="padding:6px 0;">Sin foto este mes.</p>
+      <button class="btn-outline" id="btnMonthPhotoUpload">📷 Subir foto</button>`;
+    return;
+  }
+  box.innerHTML = `
+    <img class="month-photo-preview" id="monthPhotoPreview" src="${record.dataUrl}" alt="Foto de ${MONTH_NAMES[month]} ${year}">
+    <div class="month-photo-actions">
+      <button class="btn-outline" id="btnMonthPhotoUpload">🔄 Cambiar foto</button>
+      <button class="btn-outline" id="btnMonthPhotoDelete">🗑️ Eliminar</button>
+    </div>`;
+}
+/* Reduce la foto (máx. 1600 px de lado, JPEG) para no llenar el almacenamiento del móvil */
+function compressImageFile(file, maxSide = 1600, quality = 0.85){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.round(img.naturalWidth * scale), h = Math.round(img.naturalHeight * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+document.getElementById('guardMonthPhoto').addEventListener('click', async (e) => {
+  if (e.target.closest('#btnMonthPhotoUpload')) {
+    document.getElementById('guardMonthPhotoInput').click();
+  } else if (e.target.closest('#btnMonthPhotoDelete')) {
+    if (!confirm(`¿Eliminar la foto de ${MONTH_NAMES[currentGuardMonth]} ${currentGuardYear}?`)) return;
+    await dbDelete('monthPhotos', monthPhotoKey(currentGuardYear, currentGuardMonth));
+    await renderGuardMonthPhoto(currentGuardYear, currentGuardMonth);
+  } else if (e.target.closest('#monthPhotoPreview')) {
+    document.getElementById('monthPhotoViewerImg').src = e.target.src;
+    document.getElementById('monthPhotoViewer').classList.add('open');
+  }
+});
+document.getElementById('guardMonthPhotoInput').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  const year = currentGuardYear, month = currentGuardMonth;
+  try {
+    const dataUrl = await compressImageFile(file);
+    await dbPut('monthPhotos', { id: monthPhotoKey(year, month), dataUrl, updatedAt: new Date().toISOString() });
+    await renderGuardMonthPhoto(year, month);
+  } catch (err) {
+    alert('No se pudo guardar la foto. Prueba con otra imagen (JPG o PNG).');
+  }
+});
+document.getElementById('monthPhotoViewer').addEventListener('click', () => {
+  document.getElementById('monthPhotoViewer').classList.remove('open');
+});
 
 /* eventos: Guardias */
 document.getElementById('btnGuards').addEventListener('click', () => go('guards'));
